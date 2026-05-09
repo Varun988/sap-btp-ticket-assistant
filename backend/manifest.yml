@@ -1,0 +1,10 @@
+---
+applications:
+  - name: ticket-assistant-backend
+    memory: 256M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    routes:
+      - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
