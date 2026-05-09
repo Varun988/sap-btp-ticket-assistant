@@ -1,0 +1,24 @@
+{
+  "name": "ticket-assistant-frontend",
+  "version": "1.0.0",
+  "description": "Simple frontend UI for SAP BTP Ticket Assistant",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "sap",
+    "btp",
+    "frontend",
+    "ticket-assistant",
+    "cloud-foundry"
+  ],
+  "author": "Varun Kumar",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
