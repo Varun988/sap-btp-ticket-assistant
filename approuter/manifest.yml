@@ -8,6 +8,8 @@ applications:
     command: npm start
     routes:
       - route: ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+    services:
+      - ticket-assistant-xsuaa
     env:
       destinations: >
         [

@@ -1,17 +1,19 @@
 {
   "welcomeFile": "/index.html",
-  "authenticationMethod": "none",
+  "authenticationMethod": "route",
   "routes": [
     {
       "source": "^/api/(.*)$",
       "target": "/$1",
       "destination": "ticket-assistant-backend",
+      "authenticationType": "xsuaa",
       "csrfProtection": false
     },
     {
       "source": "^(.*)$",
       "target": "$1",
       "localDir": "resources",
+      "authenticationType": "xsuaa",
       "cacheControl": "no-cache, no-store, must-revalidate"
     }
   ]
