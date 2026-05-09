@@ -1,23 +1,32 @@
 # SAP BTP Ticket Assistant
 
-AI-powered support ticket assistant built on **SAP Business Technology Platform (SAP BTP)**.  
-This project starts with a **mock AI backend** and is designed so that the mock logic can later be replaced with **SAP Generative AI Hub**.
+AI-powered support ticket assistant built on **SAP Business Technology Platform (SAP BTP)**.
+
+This project is being built step by step as a hands-on SAP BTP learning project. The current version uses a **mock AI backend** and is designed so that the mock AI logic can later be replaced with **SAP Generative AI Hub**.
 
 ---
 
 ## 1. Project Overview
 
-The goal of this project is to learn SAP BTP hands-on by building a practical application.
-
 The application accepts a support ticket description and returns:
 
 - Ticket summary
-- Category
+- Ticket category
 - Priority
 - Suggested next action
 - Processing mode
 
-Current version uses rule-based mock AI logic. Later versions will integrate SAP Generative AI Hub.
+Current mode:
+
+```text
+mock-ai
+```
+
+Future target mode:
+
+```text
+SAP Generative AI Hub
+```
 
 ---
 
@@ -29,7 +38,7 @@ A support engineer receives a ticket like:
 User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.
 ```
 
-The backend analyzes the ticket and returns:
+The application analyzes the ticket and returns a structured response:
 
 ```json
 {
@@ -41,107 +50,101 @@ The backend analyzes the ticket and returns:
 }
 ```
 
+This is useful for IT support teams because ticket triage can be made faster, more consistent, and easier to route to the correct support team.
+
 ---
 
-## 3. Current Architecture
+## 3. Current Deployed Architecture
+
+The project currently has three Cloud Foundry applications:
 
 ```text
-User / Tester
-   |
-   | HTTP request
-   v
-SAP BTP Cloud Foundry
-   |
-   v
+Cloud Foundry Space: dev
+
+1. ticket-assistant-backend
+2. ticket-assistant-frontend
+3. ticket-assistant-approuter
+```
+
+Recommended current access path:
+
+```text
+User Browser
+   ↓
+ticket-assistant-approuter
+   ↓
+Serves frontend files from approuter/resources
+   ↓
+Frontend calls /api/analyze-ticket
+   ↓
+App Router forwards request to backend
+   ↓
 ticket-assistant-backend
-   |
-   v
-Mock AI ticket analysis logic
-   |
-   v
-JSON response
-```
-
-Current flow:
-
-```text
-curl / Browser / API Client
    ↓
-Node.js Express backend on Cloud Foundry
-   ↓
-Keyword-based ticket classification
+Mock AI ticket analysis
    ↓
 JSON response
+   ↓
+Frontend displays result
 ```
 
 ---
 
-## 4. Planned Target Architecture
+## 4. Current Application URLs
 
-Later, this project can be extended as follows:
+> Update these URLs if your Cloud Foundry routes are different.
 
-```text
-User
-   ↓
-Frontend UI / HTML5 Application
-   ↓
-Application Router
-   ↓
-Node.js Backend on Cloud Foundry
-   ↓
-SAP Generative AI Hub / SAP AI Core
-   ↓
-AI-generated ticket analysis
-```
-
-Possible future enterprise flow:
+### Backend
 
 ```text
-Frontend
-   ↓
-Backend
-   ↓
-Destination Service
-   ↓
-External Ticket System / ABC System
-   ↓
-Backend
-   ↓
-Mock AI now / Generative AI Hub later
-   ↓
-Frontend result
+https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
 ```
+
+### Standalone Frontend
+
+```text
+https://ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
+```
+
+### App Router - Recommended Entry Point
+
+```text
+https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+```
+
+The App Router URL is recommended because it uses relative API paths and central routing instead of hardcoding the backend URL in the frontend.
 
 ---
 
-## 5. SAP BTP Services Used / Planned
+## 5. SAP BTP Services and Components Used
 
 ### Currently Used
 
 - **SAP Business Application Studio**  
-  Used as the cloud development environment.
+  Used as the cloud-based development environment.
 
 - **Cloud Foundry Runtime**  
-  Used to deploy and run the Node.js backend.
+  Used to deploy and run the backend, standalone frontend, and App Router.
+
+- **SAP Application Router**  
+  Used as a central entry point and routing layer.
 
 - **GitHub**  
   Used for source control.
 
-### Available in Trial Account and Planned for Later
+### Available / Planned for Later
 
 - **Authorization and Trust Management / XSUAA**  
-  Will be used later to secure the application.
+  Will be used to secure the App Router and backend APIs.
 
 - **Destination Service**  
-  Will be used later to connect to external systems or APIs.
+  Will be used to manage external system connections, such as an ABC ticket system or SAP backend.
 
 - **HTML5 Application Repository**  
-  Will be used later to host the frontend application.
-
-### AI Service Planned for Later
+  Will be used later to host the frontend in a more SAP-native way.
 
 - **SAP Generative AI Hub**  
-  The current backend uses mock AI logic. Later, the mock service can be replaced with a real SAP Generative AI Hub integration.
+  Will be used later to replace the mock AI logic with real generative AI.
 
 ---
 
@@ -151,40 +154,62 @@ Current structure:
 
 ```text
 sap-btp-ticket-assistant/
+├── README.md
 ├── .gitignore
-└── backend/
+├── backend/
+│   ├── manifest.yml
+│   ├── package.json
+│   ├── package-lock.json
+│   └── server.js
+├── frontend/
+│   ├── manifest.yml
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── server.js
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
+└── approuter/
     ├── manifest.yml
     ├── package.json
     ├── package-lock.json
-    └── server.js
+    ├── xs-app.json
+    └── resources/
+        ├── index.html
+        ├── style.css
+        └── app.js
 ```
 
-Future structure may look like:
+### Folder Purpose
 
-```text
-sap-btp-ticket-assistant/
-├── backend/
-├── frontend/
-├── approuter/
-├── xs-security.json
-├── mta.yaml
-├── README.md
-└── .gitignore
-```
+- `backend/` contains the Node.js Express API deployed to Cloud Foundry.
+- `frontend/` contains the simple standalone frontend deployed as a Cloud Foundry app.
+- `approuter/` contains the standalone SAP App Router.
+- `approuter/resources/` contains frontend static files served by the App Router.
 
 ---
 
-## 7. Backend Features
+## 7. Backend Details
 
-The backend exposes three endpoints.
+The backend is a Node.js Express application.
 
-### 7.1 Root Endpoint
+### Backend Folder
+
+```text
+backend/
+├── manifest.yml
+├── package.json
+├── package-lock.json
+└── server.js
+```
+
+### Backend Endpoints
+
+#### Root Endpoint
 
 ```http
 GET /
 ```
-
-Purpose: Confirms the backend is reachable.
 
 Example response:
 
@@ -195,15 +220,11 @@ Example response:
 }
 ```
 
----
-
-### 7.2 Health Endpoint
+#### Health Endpoint
 
 ```http
 GET /health
 ```
-
-Purpose: Simple health check endpoint.
 
 Example response:
 
@@ -214,15 +235,11 @@ Example response:
 }
 ```
 
----
-
-### 7.3 Analyze Ticket Endpoint
+#### Analyze Ticket Endpoint
 
 ```http
 POST /analyze-ticket
 ```
-
-Purpose: Accepts ticket text and returns mock AI analysis.
 
 Request body:
 
@@ -248,65 +265,211 @@ Example response:
 
 ## 8. Mock AI Logic
 
-The current implementation uses keyword-based rules.
+The current backend uses simple keyword-based logic.
 
 Examples:
 
-- If ticket contains `login`, `password`, `authentication`, `locked`, or `idm`, category becomes `Identity and Access Management`.
-- If ticket contains `database`, `sql`, `hana`, or `connection timeout`, category becomes `Database`.
-- If ticket contains `performance`, `slow`, `latency`, or `timeout`, category becomes `Performance`.
-- If ticket contains `authorization`, `access denied`, `permission`, or `role`, category becomes `Authorization`.
+- If ticket text contains `login`, `password`, `authentication`, `locked`, or `idm`, the category becomes `Identity and Access Management`.
+- If ticket text contains `database`, `sql`, `hana`, or `connection timeout`, the category becomes `Database`.
+- If ticket text contains `performance`, `slow`, `latency`, or `timeout`, the category becomes `Performance`.
+- If ticket text contains `authorization`, `access denied`, `permission`, or `role`, the category becomes `Authorization`.
 
-This mock logic is temporary and will later be replaced with real AI.
-
----
-
-## 9. Prerequisites
-
-### SAP BTP
-
-You need:
-
-- SAP BTP Trial Account
-- Cloud Foundry Runtime enabled
-- SAP Business Application Studio subscription
-- Cloud Foundry space, for example `dev`
-
-### Local / BAS Tools
-
-Inside SAP Business Application Studio, the following should be available:
-
-- Node.js
-- npm
-- Git
-- Cloud Foundry CLI
+This logic is temporary. The goal is to replace it later with SAP Generative AI Hub.
 
 ---
 
-## 10. Setup Steps
+## 9. Standalone Frontend Details
 
-### 10.1 Clone the Repository
+The standalone frontend is a simple HTML, CSS, and JavaScript UI served through a small Node.js Express server.
+
+### Frontend Folder
+
+```text
+frontend/
+├── manifest.yml
+├── package.json
+├── package-lock.json
+├── server.js
+├── index.html
+├── style.css
+└── app.js
+```
+
+### Frontend Flow
+
+```text
+Browser
+   ↓
+Standalone frontend app
+   ↓
+frontend/app.js
+   ↓
+Direct call to backend URL
+   ↓
+ticket-assistant-backend
+```
+
+In the standalone frontend, `frontend/app.js` uses a hardcoded backend URL:
+
+```javascript
+const BACKEND_URL = "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com";
+```
+
+This works, but it is not the preferred enterprise architecture because the backend URL is directly embedded in frontend code.
+
+---
+
+## 10. App Router Details
+
+The App Router is the recommended current entry point for this project.
+
+### App Router Folder
+
+```text
+approuter/
+├── manifest.yml
+├── package.json
+├── package-lock.json
+├── xs-app.json
+└── resources/
+    ├── index.html
+    ├── style.css
+    └── app.js
+```
+
+### App Router Flow
+
+```text
+Browser
+   ↓
+App Router
+   ├── Serves frontend files from resources/
+   └── Forwards /api/* requests to backend
+```
+
+### Important Frontend Change in App Router Version
+
+In the App Router version, `approuter/resources/app.js` uses a relative path:
+
+```javascript
+fetch("/api/analyze-ticket", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    ticketText
+  })
+});
+```
+
+This is better because the frontend does not need to know the backend route.
+
+---
+
+## 11. App Router Configuration: xs-app.json
+
+The `xs-app.json` file controls routing behavior for the SAP App Router.
+
+Current configuration:
+
+```json
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "none",
+  "routes": [
+    {
+      "source": "^/api/(.*)$",
+      "target": "/$1",
+      "destination": "ticket-assistant-backend",
+      "csrfProtection": false
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "localDir": "resources",
+      "cacheControl": "no-cache, no-store, must-revalidate"
+    }
+  ]
+}
+```
+
+### Route 1: API Forwarding
+
+```json
+{
+  "source": "^/api/(.*)$",
+  "target": "/$1",
+  "destination": "ticket-assistant-backend",
+  "csrfProtection": false
+}
+```
+
+This route forwards API calls to the backend.
+
+Example:
+
+```text
+Incoming request:
+POST /api/analyze-ticket
+
+Forwarded to backend as:
+POST /analyze-ticket
+```
+
+### Route 2: Static Frontend Files
+
+```json
+{
+  "source": "^(.*)$",
+  "target": "$1",
+  "localDir": "resources",
+  "cacheControl": "no-cache, no-store, must-revalidate"
+}
+```
+
+This route serves static frontend files from:
+
+```text
+approuter/resources/
+```
+
+Examples:
+
+```text
+/index.html → approuter/resources/index.html
+/style.css  → approuter/resources/style.css
+/app.js     → approuter/resources/app.js
+```
+
+### Current Authentication
+
+```json
+"authenticationMethod": "none"
+```
+
+Authentication is currently disabled so routing can be tested easily.
+
+Later, this will be changed when XSUAA security is added.
+
+---
+
+## 12. Local Setup
+
+### Clone Repository
 
 ```bash
 git clone https://github.com/<your-github-username>/sap-btp-ticket-assistant.git
 cd sap-btp-ticket-assistant
 ```
 
-### 10.2 Move to Backend Folder
+---
+
+## 13. Run Backend Locally
 
 ```bash
 cd backend
-```
-
-### 10.3 Install Dependencies
-
-```bash
 npm install
-```
-
-### 10.4 Start Backend Locally
-
-```bash
 npm start
 ```
 
@@ -316,63 +479,107 @@ Expected output:
 Ticket Assistant Backend running on port 4000
 ```
 
----
-
-## 11. Local Testing
-
-Open a second terminal while the backend is running.
-
-### Test Health Endpoint
+Test health endpoint:
 
 ```bash
 curl http://localhost:4000/health
 ```
 
-Expected response:
-
-```json
-{"status":"UP","service":"ticket-assistant-backend"}
-```
-
-### Test Root Endpoint
+Test ticket analysis:
 
 ```bash
-curl http://localhost:4000/
-```
-
-Expected response:
-
-```json
-{"message":"SAP BTP Ticket Assistant Backend is running","status":"OK"}
-```
-
-### Test Ticket Analysis Endpoint
-
-```bash
-curl -X POST http://localhost:4000/analyze-ticket \
-  -H "Content-Type: application/json" \
-  -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
-```
-
-Expected response:
-
-```json
-{
-  "summary": "User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.",
-  "category": "Identity and Access Management",
-  "priority": "High",
-  "suggestedAction": "Check user lock status, password synchronization, authentication logs, and identity management provisioning status.",
-  "mode": "mock-ai"
-}
+curl -X POST http://localhost:4000/analyze-ticket   -H "Content-Type: application/json"   -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
 ```
 
 ---
 
-## 12. Cloud Foundry Deployment
+## 14. Run Standalone Frontend Locally
 
-The backend is deployed to SAP BTP Cloud Foundry using `manifest.yml`.
+```bash
+cd frontend
+npm install
+npm start
+```
 
-### 12.1 manifest.yml
+Expected output:
+
+```text
+Ticket Assistant Frontend running on port 8080
+```
+
+Health check:
+
+```bash
+curl http://localhost:8080/health
+```
+
+---
+
+## 15. Run App Router Locally - Optional
+
+From the `approuter` folder:
+
+```bash
+cd approuter
+npm install
+```
+
+Set the backend destination as an environment variable:
+
+```bash
+export destinations='[{"name":"ticket-assistant-backend","url":"https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com","forwardAuthToken":false}]'
+```
+
+Start App Router locally:
+
+```bash
+PORT=5000 npm start
+```
+
+Test API through App Router:
+
+```bash
+curl -X POST http://localhost:5000/api/analyze-ticket   -H "Content-Type: application/json"   -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
+```
+
+---
+
+## 16. Cloud Foundry Deployment
+
+### Login to Cloud Foundry
+
+```bash
+cf api https://api.cf.us10-001.hana.ondemand.com
+cf login
+```
+
+Select the correct Cloud Foundry org and space.
+
+Example:
+
+```text
+Org: <your-cloud-foundry-org>
+Space: dev
+```
+
+Verify target:
+
+```bash
+cf target
+```
+
+---
+
+## 17. Deploy Backend
+
+From the backend folder:
+
+```bash
+cd backend
+cf push
+```
+
+Backend manifest:
 
 ```yaml
 ---
@@ -387,80 +594,132 @@ applications:
       - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
 ```
 
-### 12.2 Login to Cloud Foundry
-
-```bash
-cf api https://api.cf.us10-001.hana.ondemand.com
-cf login
-```
-
-Select the correct org and space:
-
-```text
-Org: <your-cloud-foundry-org>
-Space: dev
-```
-
-Verify target:
-
-```bash
-cf target
-```
-
-### 12.3 Deploy Backend
-
-From the backend folder:
-
-```bash
-cd backend
-cf push
-```
-
-Cloud Foundry reads `manifest.yml` and deploys the app.
-
----
-
-## 13. Test Deployed Backend
-
-Replace the URL if a different route is used in `manifest.yml`.
-
-### Health Check
+Test deployed backend:
 
 ```bash
 curl https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com/health
 ```
 
-### Analyze Ticket
+---
+
+## 18. Deploy Standalone Frontend
+
+From the frontend folder:
 
 ```bash
-curl -X POST https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com/analyze-ticket \
-  -H "Content-Type: application/json" \
-  -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
+cd frontend
+cf push
+```
+
+Frontend manifest:
+
+```yaml
+---
+applications:
+  - name: ticket-assistant-frontend
+    memory: 128M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    routes:
+      - route: ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
+```
+
+Test deployed frontend:
+
+```text
+https://ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
 ```
 
 ---
 
-## 14. Git Workflow
+## 19. Deploy App Router
 
-### Check Status
+From the App Router folder:
+
+```bash
+cd approuter
+cf push
+```
+
+App Router manifest:
+
+```yaml
+---
+applications:
+  - name: ticket-assistant-approuter
+    memory: 128M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    routes:
+      - route: ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+    env:
+      destinations: >
+        [
+          {
+            "name": "ticket-assistant-backend",
+            "url": "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com",
+            "forwardAuthToken": false
+          }
+        ]
+```
+
+Test App Router UI:
+
+```text
+https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+```
+
+Test App Router API route:
+
+```bash
+curl -X POST https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/api/analyze-ticket   -H "Content-Type: application/json"   -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
+```
+
+---
+
+## 20. Verify Cloud Foundry Applications
+
+Run:
+
+```bash
+cf apps
+```
+
+Expected applications:
+
+```text
+ticket-assistant-backend       started
+ticket-assistant-frontend      started
+ticket-assistant-approuter     started
+```
+
+---
+
+## 21. Git Workflow
+
+Check status:
 
 ```bash
 git status
 ```
 
-### Stage Changes
+Stage changes:
 
 ```bash
 git add .
 ```
 
-### Commit Changes
+Commit changes:
 
 ```bash
-git commit -m "Initial backend for SAP BTP Ticket Assistant"
+git commit -m "Your commit message"
 ```
 
-### Push Changes
+Push changes:
 
 ```bash
 git push
@@ -468,15 +727,17 @@ git push
 
 ---
 
-## 15. Troubleshooting
+## 22. Troubleshooting
 
-### 15.1 Route Already Exists
+### Route Already Exists
 
-If deployment fails because the route is already in use, update the route in `manifest.yml`:
+If deployment fails because a route is already in use, update the route in the relevant `manifest.yml` file.
+
+Example:
 
 ```yaml
 routes:
-  - route: ticket-assistant-backend-<unique-id>.cfapps.us10-001.hana.ondemand.com
+  - route: ticket-assistant-approuter-<unique-id>.cfapps.us10-001.hana.ondemand.com
 ```
 
 Then run:
@@ -485,21 +746,21 @@ Then run:
 cf push
 ```
 
-### 15.2 App Fails to Start
+### App Fails to Start
 
 Check recent logs:
 
 ```bash
-cf logs ticket-assistant-backend --recent
+cf logs <app-name> --recent
 ```
 
-Restart the app:
+Restart app:
 
 ```bash
-cf restart ticket-assistant-backend
+cf restart <app-name>
 ```
 
-### 15.3 Wrong Cloud Foundry Space
+### Wrong Cloud Foundry Space
 
 Check target:
 
@@ -513,7 +774,7 @@ Set correct target:
 cf target -o <org-name> -s dev
 ```
 
-### 15.4 node_modules Accidentally Appears in Git
+### node_modules Appears in Git
 
 Make sure `.gitignore` contains:
 
@@ -529,24 +790,24 @@ git status
 
 ---
 
-## 16. Future Enhancements
+## 23. Future Enhancements
 
 Planned enhancements:
 
-1. Add frontend UI.
-2. Connect frontend to deployed backend.
-3. Add application router.
-4. Add XSUAA authentication.
-5. Add Destination service integration.
-6. Read ticket data from an external system such as ABC.
-7. Replace mock AI logic with SAP Generative AI Hub.
-8. Deploy frontend to HTML5 Application Repository.
-9. Convert project to MTA-based deployment.
-10. Add screenshots and architecture diagram.
+1. Add XSUAA authentication to App Router.
+2. Protect backend APIs using JWT validation.
+3. Add role-based access using scopes and role collections.
+4. Add Destination service integration.
+5. Read ticket data from an external system such as ABC.
+6. Replace mock AI logic with SAP Generative AI Hub.
+7. Deploy frontend to HTML5 Application Repository.
+8. Convert project to MTA-based deployment.
+9. Add screenshots and architecture diagrams.
+10. Add CI/CD deployment pipeline.
 
 ---
 
-## 17. Learning Outcomes
+## 24. Learning Outcomes
 
 This project helps learn:
 
@@ -554,7 +815,11 @@ This project helps learn:
 - Cloud Foundry runtime
 - SAP Business Application Studio
 - Node.js backend development
+- Static frontend deployment
 - Cloud Foundry deployment using `manifest.yml`
+- Standalone SAP App Router
+- `xs-app.json` routing
+- Relative API routing using `/api/*`
 - GitHub workflow
 - API design and testing
 - Mock AI architecture
@@ -562,32 +827,36 @@ This project helps learn:
 
 ---
 
-## 18. Current Status
+## 25. Current Status
 
 Completed:
 
 - GitHub repository created
-- Backend created
-- Mock AI logic implemented
-- Backend tested locally
-- `manifest.yml` added
+- Backend created and tested locally
 - Backend deployed to SAP BTP Cloud Foundry
+- Standalone frontend created and deployed
+- App Router created and deployed
+- App Router UI tested
+- App Router `/api` endpoint tested
+- Code pushed to GitHub
 
-In progress / next:
+Next:
 
-- Add frontend UI
-- Connect frontend to backend
-- Add security and destinations later
+- Add XSUAA authentication
+- Add role-based security
+- Add Destination service integration
+- Integrate SAP Generative AI Hub
 
 ---
 
-## 19. Author
+## 26. Author
 
 **Varun Kumar**
 
 ---
 
-## 20. Notes
+## 27. Notes
 
-This project is built step by step for learning SAP BTP through a practical, resume-worthy use case.  
+This project is built step by step for learning SAP BTP through a practical, resume-worthy use case.
+
 The current AI behavior is mock logic. Real SAP Generative AI Hub integration will be added in a future version.
