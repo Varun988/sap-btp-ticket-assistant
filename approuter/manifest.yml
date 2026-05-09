@@ -1,0 +1,19 @@
+---
+applications:
+  - name: ticket-assistant-approuter
+    memory: 128M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    routes:
+      - route: ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+    env:
+      destinations: >
+        [
+          {
+            "name": "ticket-assistant-backend",
+            "url": "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com",
+            "forwardAuthToken": false
+          }
+        ]

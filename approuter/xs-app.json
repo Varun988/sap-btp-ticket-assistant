@@ -1,0 +1,18 @@
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "none",
+  "routes": [
+    {
+      "source": "^/api/(.*)$",
+      "target": "/$1",
+      "destination": "ticket-assistant-backend",
+      "csrfProtection": false
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "localDir": "resources",
+      "cacheControl": "no-cache, no-store, must-revalidate"
+    }
+  ]
+}
