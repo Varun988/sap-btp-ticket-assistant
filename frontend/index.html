@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAP BTP Ticket Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <header>
+        <h1>SAP BTP Ticket Assistant</h1>
+        <p>
+          Enter a support ticket description and get a mock AI-based summary,
+          category, priority, and suggested action.
+        </p>
+      </header>
+
+      <section class="form-section">
+        <label for="ticketText">Ticket Description</label>
+        <textarea
+          id="ticketText"
+          rows="8"
+          placeholder="Example: User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."
+        ></textarea>
+
+        <button id="analyzeBtn">Analyze Ticket</button>
+      </section>
+
+      <section id="loading" class="loading hidden">
+        Analyzing ticket...
+      </section>
+
+      <section id="errorBox" class="error hidden"></section>
+
+      <section id="resultCard" class="result hidden">
+        <h2>Analysis Result</h2>
+
+        <div class="result-row">
+          <span class="label">Summary</span>
+          <span id="summary"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Category</span>
+          <span id="category"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Priority</span>
+          <span id="priority"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Suggested Action</span>
+          <span id="suggestedAction"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Mode</span>
+          <span id="mode"></span>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
