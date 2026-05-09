@@ -16,6 +16,6 @@ applications:
           {
             "name": "ticket-assistant-backend",
             "url": "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com",
-            "forwardAuthToken": false
+            "forwardAuthToken": true
           }
         ]

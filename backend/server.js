@@ -1,11 +1,44 @@
 const express = require("express");
 const cors = require("cors");
+const passport = require("passport");
+const xsenv = require("@sap/xsenv");
+const { JWTStrategy } = require("@sap/xssec").v3;
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+
+// Configure XSUAA JWT validation only when XSUAA binding exists.
+// This allows local development without XSUAA, but enforces JWT validation on SAP BTP.
+let jwtAuthMiddleware = null;
+
+try {
+  const services = xsenv.getServices({
+    xsuaa: { tag: "xsuaa" }
+  });
+
+  passport.use(new JWTStrategy(services.xsuaa));
+  app.use(passport.initialize());
+
+  jwtAuthMiddleware = passport.authenticate("JWT", {
+    session: false
+  });
+
+  console.log("XSUAA JWT authentication enabled.");
+} catch (error) {
+  console.warn("XSUAA binding not found. Running without JWT authentication.");
+  console.warn("This is acceptable for local development only.");
+}
+
+function requireJwt(req, res, next) {
+  if (!jwtAuthMiddleware) {
+    return next();
+  }
+
+  return jwtAuthMiddleware(req, res, next);
+}
 
 function analyzeTicket(ticketText) {
   const text = ticketText.toLowerCase();
@@ -85,7 +118,9 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.post("/analyze-ticket", (req, res) => {
+// Protected endpoint.
+// On SAP BTP, this requires a valid XSUAA JWT token.
+app.post("/analyze-ticket", requireJwt, (req, res) => {
   const { ticketText } = req.body;
 
   if (!ticketText || ticketText.trim().length === 0) {
