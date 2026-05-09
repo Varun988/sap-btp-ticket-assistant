@@ -1,6 +1,34 @@
 {
   "xsappname": "ticket-assistant",
   "tenant-mode": "dedicated",
+  "description": "Security configuration for SAP BTP Ticket Assistant",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.TicketAssistantUser",
+      "description": "Allows a user to analyze support tickets"
+    },
+    {
+      "name": "$XSAPPNAME.TicketAssistantAdmin",
+      "description": "Allows an admin to manage ticket assistant configuration"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "TicketAssistantUser",
+      "description": "User role for SAP BTP Ticket Assistant",
+      "scope-references": [
+        "$XSAPPNAME.TicketAssistantUser"
+      ]
+    },
+    {
+      "name": "TicketAssistantAdmin",
+      "description": "Admin role for SAP BTP Ticket Assistant",
+      "scope-references": [
+        "$XSAPPNAME.TicketAssistantUser",
+        "$XSAPPNAME.TicketAssistantAdmin"
+      ]
+    }
+  ],
   "oauth2-configuration": {
     "redirect-uris": [
       "https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/login/callback",

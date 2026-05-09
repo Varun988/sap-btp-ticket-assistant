@@ -40,6 +40,47 @@ function requireJwt(req, res, next) {
   return jwtAuthMiddleware(req, res, next);
 }
 
+function requireScope(scopeName) {
+  return (req, res, next) => {
+    if (!jwtAuthMiddleware) {
+      return next();
+    }
+
+    if (!req.authInfo || typeof req.authInfo.checkScope !== "function") {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "Authorization information is missing."
+      });
+    }
+
+    let xsappname;
+
+    try {
+      const services = xsenv.getServices({
+        xsuaa: { tag: "xsuaa" }
+      });
+
+      xsappname = services.xsuaa.xsappname;
+    } catch (error) {
+      return res.status(500).json({
+        error: "Security configuration error",
+        message: "Unable to read XSUAA xsappname."
+      });
+    }
+
+    const requiredScope = `${xsappname}.${scopeName}`;
+
+    if (!req.authInfo.checkScope(requiredScope)) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: `Missing required scope: ${requiredScope}`
+      });
+    }
+
+    return next();
+  };
+}
+
 function analyzeTicket(ticketText) {
   const text = ticketText.toLowerCase();
 
@@ -120,19 +161,24 @@ app.get("/health", (req, res) => {
 
 // Protected endpoint.
 // On SAP BTP, this requires a valid XSUAA JWT token.
-app.post("/analyze-ticket", requireJwt, (req, res) => {
-  const { ticketText } = req.body;
+app.post(
+  "/analyze-ticket",
+  requireJwt,
+  requireScope("TicketAssistantUser"),
+  (req, res) => {
+    const { ticketText } = req.body;
 
-  if (!ticketText || ticketText.trim().length === 0) {
-    return res.status(400).json({
-      error: "ticketText is required"
-    });
+    if (!ticketText || ticketText.trim().length === 0) {
+      return res.status(400).json({
+        error: "ticketText is required"
+      });
+    }
+
+    const result = analyzeTicket(ticketText);
+
+    res.json(result);
   }
-
-  const result = analyzeTicket(ticketText);
-
-  res.json(result);
-});
+);
 
 app.listen(PORT, () => {
   console.log(`Ticket Assistant Backend running on port ${PORT}`);
