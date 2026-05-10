@@ -2,7 +2,9 @@
 
 AI-powered support ticket assistant built on **SAP Business Technology Platform (SAP BTP)**.
 
-This project is being built step by step as a hands-on SAP BTP learning project. The current version uses a **mock AI backend** and is designed so that the mock AI logic can later be replaced with **SAP Generative AI Hub**.
+This project is a hands-on SAP BTP learning project that demonstrates a secure, full-stack extension-style application using Cloud Foundry, SAP Application Router, XSUAA, Destination Service, HTML5 Application Repository, and an AI-ready backend architecture.
+
+The current backend uses **mock AI logic** and is structured so that it can later be connected to **SAP Generative AI Hub / SAP AI Core** when service credentials are available.
 
 ---
 
@@ -25,7 +27,7 @@ mock-ai
 Future target mode:
 
 ```text
-SAP Generative AI Hub
+SAP Generative AI Hub / SAP AI Core
 ```
 
 ---
@@ -65,19 +67,20 @@ Space: dev
 Current Cloud Foundry applications:
 
 ```text
-ticket-assistant-backend      → Node.js backend API
-ticket-assistant-approuter    → XSUAA-secured central entry point
-ticket-assistant-frontend     → Older standalone frontend, optional/stopped after App Router setup
+ticket-assistant-backend          → Node.js backend API
+ticket-assistant-approuter        → XSUAA-secured central entry point
+ticket-assistant-html5-deployer   → Upload utility for HTML5 Application Repository, stopped after upload
+ticket-assistant-frontend         → Older standalone frontend, optional/stopped after App Router + HTML5 repo setup
 ```
 
-Recommended current access path:
+Recommended current runtime path:
 
 ```text
 User Browser
    ↓
 XSUAA-secured App Router
    ↓
-Role-authorized frontend served from approuter/resources
+Frontend served from HTML5 Application Repository
    ↓
 Frontend calls /api/analyze-ticket
    ↓
@@ -91,7 +94,9 @@ Backend validates JWT token
    ↓
 Backend checks TicketAssistantUser scope
    ↓
-Mock AI ticket analysis
+Backend routes request to AI analyzer service
+   ↓
+mockAnalyzer.js currently processes ticket
    ↓
 JSON response
    ↓
@@ -110,7 +115,7 @@ Update these URLs if your Cloud Foundry routes are different.
 https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
 ```
 
-### Standalone Frontend - Optional
+### Standalone Frontend - Optional / Legacy
 
 ```text
 https://ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
@@ -122,7 +127,13 @@ https://ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
 https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
 ```
 
-The App Router URL is recommended because it uses XSUAA login, role-based authorization, relative API paths, central routing, and Destination Service-based backend routing.
+### HTML5 Repository App Path
+
+```text
+https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/ticketassistant/index.html
+```
+
+The App Router URL is recommended because it uses XSUAA login, role-based authorization, relative API paths, Destination Service-based backend routing, and HTML5 Application Repository-based frontend hosting.
 
 ---
 
@@ -134,30 +145,30 @@ The App Router URL is recommended because it uses XSUAA login, role-based author
   Used as the cloud-based development environment.
 
 - **Cloud Foundry Runtime**  
-  Used to deploy and run the backend, standalone frontend, and App Router.
+  Used to deploy and run the backend, standalone frontend, App Router, and HTML5 deployer.
 
 - **Authorization and Trust Management / XSUAA**  
   Used for App Router login, JWT issuance, scopes, role templates, and backend JWT validation.
 
 - **SAP Application Router**  
-  Used as the central entry point, authentication layer, static file server, and API router.
+  Used as the central entry point, authentication layer, HTML5 Repository runtime consumer, and API router.
 
 - **Destination Service**  
-  Used to externalize backend routing configuration from App Router manifest to BTP Cockpit.
+  Used to externalize backend routing configuration from App Router manifest into BTP Cockpit.
 
 - **HTML5 Application Repository**  
-  Service instances have been created to prepare for SAP-native HTML5 frontend deployment.
+  Used to host the frontend UI in a SAP-native way.
 
 - **GitHub**  
   Used for source control.
 
-### Planned for Later
+### Planned / Prepared
 
-- **SAP Generative AI Hub**  
-  Will replace the current mock AI logic with real generative AI.
+- **SAP Generative AI Hub / SAP AI Core**  
+  Backend is refactored and ready for future Generative AI Hub integration once AI Core credentials are available.
 
 - **MTA Deployment**  
-  Will consolidate backend, App Router, XSUAA, Destination, and HTML5 repository deployment into a single enterprise-style deployment unit.
+  Planned to consolidate backend, App Router, XSUAA, Destination, and HTML5 Application Repository deployment into a single enterprise-style deployment unit.
 
 ---
 
@@ -173,7 +184,10 @@ sap-btp-ticket-assistant/
 │   ├── manifest.yml
 │   ├── package.json
 │   ├── package-lock.json
-│   └── server.js
+│   ├── server.js
+│   └── services/
+│       ├── mockAnalyzer.js
+│       └── genAiAnalyzer.js
 ├── frontend/
 │   ├── manifest.yml
 │   ├── package.json
@@ -182,40 +196,37 @@ sap-btp-ticket-assistant/
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
-└── approuter/
+├── approuter/
+│   ├── manifest.yml
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── xs-app.json
+│   ├── xs-security.json
+│   └── resources/
+│       ├── index.html
+│       ├── style.css
+│       └── app.js
+└── html5-deployer/
     ├── manifest.yml
     ├── package.json
     ├── package-lock.json
-    ├── xs-app.json
-    ├── xs-security.json
     └── resources/
-        ├── index.html
-        ├── style.css
-        └── app.js
-```
-
-Future HTML5 repository deployment structure may add:
-
-```text
-html5-deployer/
-├── package.json
-├── manifest.yml
-└── resources/
-    └── ticketassistant/
-        ├── index.html
-        ├── style.css
-        ├── app.js
-        ├── manifest.json
-        └── xs-app.json
+        └── ticketassistant/
+            ├── index.html
+            ├── style.css
+            ├── app.js
+            ├── manifest.json
+            └── xs-app.json
 ```
 
 ### Folder Purpose
 
-- `backend/` contains the Node.js Express API deployed to Cloud Foundry.
+- `backend/` contains the secured Node.js Express API deployed to Cloud Foundry.
+- `backend/services/mockAnalyzer.js` contains the current mock ticket analysis logic.
+- `backend/services/genAiAnalyzer.js` is the future SAP Generative AI Hub integration point.
 - `frontend/` contains the older standalone frontend deployed as a Cloud Foundry app.
-- `approuter/` contains the standalone SAP App Router.
-- `approuter/resources/` contains frontend static files currently served by the App Router.
-- `html5-deployer/` will later upload frontend content to HTML5 Application Repository.
+- `approuter/` contains the standalone SAP App Router configuration.
+- `html5-deployer/` uploads frontend content to HTML5 Application Repository.
 
 ---
 
@@ -230,7 +241,20 @@ backend/
 ├── manifest.yml
 ├── package.json
 ├── package-lock.json
-└── server.js
+├── server.js
+└── services/
+    ├── mockAnalyzer.js
+    └── genAiAnalyzer.js
+```
+
+### Backend Responsibilities
+
+```text
+1. Accept ticket analysis requests.
+2. Validate XSUAA JWT token.
+3. Check TicketAssistantUser scope.
+4. Route request to AI analyzer service.
+5. Return structured JSON response.
 ```
 
 ### Backend Endpoints
@@ -302,7 +326,72 @@ Example response:
 
 ---
 
-## 8. Mock AI Logic
+## 8. AI Analyzer Design
+
+The backend now supports an AI mode switch using the environment variable:
+
+```text
+AI_MODE
+```
+
+Current backend manifest uses:
+
+```yaml
+env:
+  AI_MODE: mock
+```
+
+### Supported Modes
+
+```text
+AI_MODE=mock
+```
+
+Uses current keyword-based mock analyzer.
+
+```text
+AI_MODE=genai
+```
+
+Intended future mode for SAP Generative AI Hub / SAP AI Core integration.
+
+### Current AI Service Files
+
+```text
+backend/services/mockAnalyzer.js
+```
+
+Contains the current mock keyword-based analyzer.
+
+```text
+backend/services/genAiAnalyzer.js
+```
+
+Contains the future SAP Generative AI Hub integration placeholder. If AI Core credentials are not available, it safely falls back to mock logic and returns:
+
+```text
+mock-ai-fallback-genai-not-configured
+```
+
+### Future GenAI Flow
+
+```text
+POST /analyze-ticket
+   ↓
+server.js checks AI_MODE
+   ↓
+AI_MODE=genai
+   ↓
+genAiAnalyzer.js
+   ↓
+SAP AI Core / Generative AI Hub orchestration API
+   ↓
+Structured JSON response
+```
+
+---
+
+## 9. Mock AI Logic
 
 The current backend uses simple keyword-based logic.
 
@@ -313,11 +402,46 @@ Examples:
 - If ticket text contains `performance`, `slow`, `latency`, or `timeout`, the category becomes `Performance`.
 - If ticket text contains `authorization`, `access denied`, `permission`, or `role`, the category becomes `Authorization`.
 
-This logic is temporary. The goal is to replace it later with SAP Generative AI Hub.
+This logic is temporary. The backend is now structured so it can later call SAP Generative AI Hub when AI Core credentials are available.
 
 ---
 
-## 9. Standalone Frontend Details - Optional
+## 10. SAP Generative AI Hub Readiness
+
+Real SAP Generative AI Hub integration is not active yet because AI Core service credentials are not currently available in the trial Cloud Foundry space used for this project.
+
+The backend is prepared for future integration with expected configuration values such as:
+
+```text
+AICORE_CLIENT_ID
+AICORE_CLIENT_SECRET
+AICORE_AUTH_URL
+AICORE_BASE_URL
+AICORE_RESOURCE_GROUP
+AI_MODE=genai
+```
+
+Future implementation point:
+
+```text
+backend/services/genAiAnalyzer.js
+```
+
+Planned future flow:
+
+```text
+Backend
+   ↓
+SAP AI Core service binding / service key
+   ↓
+Generative AI Hub orchestration or foundation model API
+   ↓
+LLM-generated ticket analysis
+```
+
+---
+
+## 11. Standalone Frontend Details - Optional / Legacy
 
 The standalone frontend is a simple HTML, CSS, and JavaScript UI served through a small Node.js Express server.
 
@@ -334,33 +458,17 @@ frontend/
 └── app.js
 ```
 
-### Frontend Flow
-
-```text
-Browser
-   ↓
-Standalone frontend app
-   ↓
-frontend/app.js
-   ↓
-Direct call to backend URL
-   ↓
-ticket-assistant-backend
-```
-
 In the standalone frontend, `frontend/app.js` uses a hardcoded backend URL:
 
 ```javascript
 const BACKEND_URL = "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com";
 ```
 
-This works, but it is not the preferred enterprise architecture because the backend URL is directly embedded in frontend code.
-
-After App Router and Destination Service setup, the standalone frontend is optional and can remain stopped.
+This approach is now superseded by the App Router + HTML5 Application Repository setup.
 
 ---
 
-## 10. App Router Details
+## 12. App Router Details
 
 The App Router is the recommended current entry point for this project.
 
@@ -379,38 +487,73 @@ approuter/
     └── app.js
 ```
 
-### App Router Flow
+The `resources/` folder is retained as a fallback/reference, but the active frontend is now served from HTML5 Application Repository.
+
+### Current App Router Flow
 
 ```text
 Browser
    ↓
 App Router
    ├── Authenticates user using XSUAA
-   ├── Serves frontend files from resources/
+   ├── Serves frontend from HTML5 Application Repository runtime
    └── Forwards /api/* requests to backend through Destination Service
 ```
 
-### Important Frontend Change in App Router Version
+---
 
-In the App Router version, `approuter/resources/app.js` uses a relative path:
+## 13. App Router Configuration: xs-app.json
 
-```javascript
-fetch("/api/analyze-ticket", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    ticketText
-  })
-});
+Current `approuter/xs-app.json` concept:
+
+```json
+{
+  "welcomeFile": "/ticketassistant/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+      "source": "^/api/(.*)$",
+      "target": "/$1",
+      "destination": "ticket-assistant-backend",
+      "authenticationType": "xsuaa",
+      "csrfProtection": false
+    },
+    {
+      "source": "^(/.*)$",
+      "target": "$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa",
+      "cacheControl": "no-cache, no-store, must-revalidate"
+    }
+  ]
+}
 ```
 
-This is better because the frontend does not need to know the backend route.
+### Route 1: Backend API Forwarding
+
+```text
+/api/analyze-ticket → /analyze-ticket on ticket-assistant-backend
+```
+
+The App Router resolves `ticket-assistant-backend` from BTP Destination Service.
+
+### Route 2: HTML5 Repository Frontend Serving
+
+```text
+/ticketassistant/index.html → HTML5 Application Repository runtime
+```
+
+Important:
+
+```text
+service: html5-apps-repo-rt
+```
+
+is the App Router runtime service alias, not the Cloud Foundry service instance name.
 
 ---
 
-## 11. XSUAA Security Configuration
+## 14. XSUAA Security Configuration
 
 Security descriptor:
 
@@ -441,12 +584,6 @@ Assigned role:
 TicketAssistantUser
 ```
 
-Assigned to user:
-
-```text
-Your SAP BTP trial user
-```
-
 Important behavior:
 
 ```text
@@ -457,88 +594,7 @@ Valid JWT + role   → Request succeeds
 
 ---
 
-## 12. App Router Configuration: xs-app.json
-
-The `xs-app.json` file controls routing behavior for the SAP App Router.
-
-Current configuration concept:
-
-```json
-{
-  "welcomeFile": "/index.html",
-  "authenticationMethod": "route",
-  "routes": [
-    {
-      "source": "^/api/(.*)$",
-      "target": "/$1",
-      "destination": "ticket-assistant-backend",
-      "authenticationType": "xsuaa",
-      "csrfProtection": false
-    },
-    {
-      "source": "^(.*)$",
-      "target": "$1",
-      "localDir": "resources",
-      "authenticationType": "xsuaa",
-      "cacheControl": "no-cache, no-store, must-revalidate"
-    }
-  ]
-}
-```
-
-### Route 1: API Forwarding
-
-```json
-{
-  "source": "^/api/(.*)$",
-  "target": "/$1",
-  "destination": "ticket-assistant-backend",
-  "authenticationType": "xsuaa",
-  "csrfProtection": false
-}
-```
-
-This route forwards API calls to the backend.
-
-Example:
-
-```text
-Incoming request:
-POST /api/analyze-ticket
-
-Forwarded to backend as:
-POST /analyze-ticket
-```
-
-### Route 2: Static Frontend Files
-
-```json
-{
-  "source": "^(.*)$",
-  "target": "$1",
-  "localDir": "resources",
-  "authenticationType": "xsuaa",
-  "cacheControl": "no-cache, no-store, must-revalidate"
-}
-```
-
-This route serves static frontend files from:
-
-```text
-approuter/resources/
-```
-
-Examples:
-
-```text
-/index.html → approuter/resources/index.html
-/style.css  → approuter/resources/style.css
-/app.js     → approuter/resources/app.js
-```
-
----
-
-## 13. Destination Service Configuration
+## 15. Destination Service Configuration
 
 Destination service instance:
 
@@ -574,9 +630,9 @@ The App Router manifest no longer contains inline backend destinations. The App 
 
 ---
 
-## 14. HTML5 Application Repository Preparation
+## 16. HTML5 Application Repository Setup
 
-HTML5 Application Repository service instances created:
+HTML5 Application Repository service instances:
 
 ```text
 ticket-assistant-html5-host      → html5-apps-repo / app-host
@@ -590,11 +646,41 @@ app-host    → Upload/store frontend content
 app-runtime → Runtime access to HTML5 application content
 ```
 
-HTML5 repository frontend deployment is the next planned implementation phase.
+Uploaded HTML5 app:
+
+```text
+ticketassistant
+```
+
+Verified using:
+
+```bash
+cf html5-list
+```
+
+Expected output includes:
+
+```text
+ticketassistant   1.0.0   ticket-assistant-html5-host
+```
+
+Important fix applied:
+
+```text
+Removed localDir route from html5-deployer/resources/ticketassistant/xs-app.json
+```
+
+This fixed the issue where the App Router attempted to load files from:
+
+```text
+/home/vcap/app/index.html
+```
+
+instead of HTML5 Application Repository runtime.
 
 ---
 
-## 15. Local Setup
+## 17. Local Setup
 
 ### Clone Repository
 
@@ -613,7 +699,7 @@ git config --global --list
 
 ---
 
-## 16. Run Backend Locally
+## 18. Run Backend Locally
 
 ```bash
 cd backend
@@ -650,7 +736,7 @@ curl -X POST http://localhost:4000/analyze-ticket \
 
 ---
 
-## 17. Run Standalone Frontend Locally
+## 19. Run Standalone Frontend Locally - Optional
 
 ```bash
 cd frontend
@@ -679,40 +765,7 @@ python3 -m http.server 8080
 
 ---
 
-## 18. Run App Router Locally - Optional
-
-From the `approuter` folder:
-
-```bash
-cd approuter
-npm install
-```
-
-For inline local destination testing:
-
-```bash
-export destinations='[{"name":"ticket-assistant-backend","url":"https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com","forwardAuthToken":true}]'
-```
-
-Start App Router locally:
-
-```bash
-PORT=5000 npm start
-```
-
-Test API through App Router locally:
-
-```bash
-curl -X POST http://localhost:5000/api/analyze-ticket \
-  -H "Content-Type: application/json" \
-  -d '{"ticketText":"User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials."}'
-```
-
----
-
-## 19. Cloud Foundry CLI Commands Used
-
-This section lists the important Cloud Foundry commands used during the project.
+## 20. Cloud Foundry CLI Commands Used
 
 ### Check CF CLI Version
 
@@ -764,13 +817,9 @@ cf services
 
 ### Check Marketplace Offering Plans
 
-Used for HTML5 Application Repository service plan checks:
-
 ```bash
 cf marketplace -e html5-apps-repo
 ```
-
-With unavailable plans shown:
 
 ```bash
 cf marketplace -e html5-apps-repo --show-unavailable
@@ -786,7 +835,7 @@ Note: Some CF CLI versions do not support `cf marketplace -s`. Use `-e` instead.
 
 ---
 
-## 20. Deploy Backend to Cloud Foundry
+## 21. Deploy Backend to Cloud Foundry
 
 From the backend folder:
 
@@ -795,7 +844,7 @@ cd backend
 cf push
 ```
 
-Backend manifest:
+Current backend manifest concept:
 
 ```yaml
 ---
@@ -810,6 +859,8 @@ applications:
       - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
     services:
       - ticket-assistant-xsuaa
+    env:
+      AI_MODE: mock
 ```
 
 Test deployed backend health endpoint:
@@ -834,40 +885,6 @@ Expected:
 
 ---
 
-## 21. Deploy Standalone Frontend to Cloud Foundry - Optional
-
-From the frontend folder:
-
-```bash
-cd frontend
-cf push
-```
-
-Frontend manifest:
-
-```yaml
----
-applications:
-  - name: ticket-assistant-frontend
-    memory: 128M
-    instances: 1
-    buildpacks:
-      - nodejs_buildpack
-    command: npm start
-    routes:
-      - route: ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
-```
-
-Test deployed standalone frontend:
-
-```text
-https://ticket-assistant-frontend.cfapps.us10-001.hana.ondemand.com
-```
-
-The standalone frontend is optional after App Router setup.
-
----
-
 ## 22. Deploy App Router to Cloud Foundry
 
 From the App Router folder:
@@ -877,13 +894,13 @@ cd approuter
 cf push
 ```
 
-Current App Router manifest:
+Current App Router manifest concept:
 
 ```yaml
 ---
 applications:
   - name: ticket-assistant-approuter
-    memory: 128M
+    memory: 256M
     instances: 1
     buildpacks:
       - nodejs_buildpack
@@ -893,6 +910,7 @@ applications:
     services:
       - ticket-assistant-xsuaa
       - ticket-assistant-destination
+      - ticket-assistant-html5-runtime
 ```
 
 Test App Router UI:
@@ -901,15 +919,17 @@ Test App Router UI:
 https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
 ```
 
-Test App Router API route through browser UI. A direct `curl` request to the XSUAA-protected App Router may redirect to login and is not equivalent to a browser-authenticated session.
+Direct HTML5 app path:
+
+```text
+https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/ticketassistant/index.html
+```
 
 ---
 
 ## 23. XSUAA Service Commands Used
 
 ### Create XSUAA Service Instance
-
-From `approuter` folder:
 
 ```bash
 cf create-service xsuaa application ticket-assistant-xsuaa -c xs-security.json
@@ -969,11 +989,12 @@ cf service ticket-assistant-destination
 cf env ticket-assistant-approuter
 ```
 
-In `VCAP_SERVICES`, verify that both of these are present:
+In `VCAP_SERVICES`, verify:
 
 ```text
 xsuaa
 destination
+html5-apps-repo
 ```
 
 ---
@@ -985,8 +1006,6 @@ destination
 ```bash
 cf marketplace -e html5-apps-repo
 ```
-
-or:
 
 ```bash
 cf marketplace -e html5-apps-repo --show-unavailable
@@ -1016,24 +1035,65 @@ cf create-service html5-apps-repo app-runtime ticket-assistant-html5-runtime
 cf service ticket-assistant-html5-runtime
 ```
 
-### Verify Services
+### Install HTML5 CLI Plugin
 
 ```bash
-cf services
+cf install-plugin -r CF-Community "html5-plugin" -f
 ```
 
-Expected relevant services:
+### List HTML5 Applications
+
+```bash
+cf html5-list
+```
+
+### List Files for Uploaded HTML5 App
+
+```bash
+cf html5-list ticketassistant
+```
+
+Expected paths include:
 
 ```text
-ticket-assistant-xsuaa
-ticket-assistant-destination
-ticket-assistant-html5-host
-ticket-assistant-html5-runtime
+/ticketassistant-1.0.0/index.html
+/ticketassistant-1.0.0/app.js
+/ticketassistant-1.0.0/style.css
+/ticketassistant-1.0.0/manifest.json
+/ticketassistant-1.0.0/xs-app.json
 ```
 
 ---
 
-## 26. Application Lifecycle Commands Used
+## 26. HTML5 Deployer Commands Used
+
+### Deploy / Upload HTML5 Frontend Content
+
+```bash
+cd html5-deployer
+npm install
+cf push
+```
+
+Expected successful log messages:
+
+```text
+Resources were successfully uploaded to Server
+Application Deployer finished ..
+Exit status 0
+```
+
+### Stop Deployer After Upload
+
+```bash
+cf stop ticket-assistant-html5-deployer
+```
+
+The deployer is not a long-running app. It is expected to stop after upload.
+
+---
+
+## 27. Application Lifecycle Commands Used
 
 ### Start Backend
 
@@ -1071,14 +1131,10 @@ cf restart ticket-assistant-approuter
 cf stop ticket-assistant-frontend
 ```
 
-### Check App Details
+### Stop HTML5 Deployer
 
 ```bash
-cf app ticket-assistant-approuter
-```
-
-```bash
-cf app ticket-assistant-backend
+cf stop ticket-assistant-html5-deployer
 ```
 
 ### Check Recent Logs
@@ -1089,6 +1145,10 @@ cf logs ticket-assistant-approuter --recent
 
 ```bash
 cf logs ticket-assistant-backend --recent
+```
+
+```bash
+cf logs ticket-assistant-html5-deployer --recent
 ```
 
 ### Inspect App Environment and Service Bindings
@@ -1103,7 +1163,7 @@ cf env ticket-assistant-backend
 
 ---
 
-## 27. Git Workflow Commands Used
+## 28. Git Workflow Commands Used
 
 ### Check Status
 
@@ -1117,66 +1177,21 @@ git status
 git add .
 ```
 
-### Commit Initial Backend
+### Commit Examples Used
 
 ```bash
 git commit -m "Initial backend for SAP BTP Ticket Assistant"
-```
-
-### Add README
-
-```bash
-git add README.md
 git commit -m "Add detailed project README"
-```
-
-### Add Frontend UI
-
-```bash
-git add .
 git commit -m "Add simple frontend UI"
-```
-
-### Deploy Frontend as Cloud Foundry App
-
-```bash
-git add .
 git commit -m "Deploy frontend as Cloud Foundry app"
-```
-
-### Add Standalone App Router
-
-```bash
-git add .
 git commit -m "Add standalone App Router"
-```
-
-### Secure App Router with XSUAA
-
-```bash
-git add approuter/xs-security.json approuter/xs-app.json approuter/manifest.yml
 git commit -m "Secure App Router with XSUAA"
-```
-
-### Protect Backend with JWT Validation
-
-```bash
-git add backend/package.json backend/package-lock.json backend/server.js backend/manifest.yml approuter/manifest.yml
 git commit -m "Protect backend with XSUAA JWT validation"
-```
-
-### Add Role-Based Authorization
-
-```bash
-git add approuter/xs-security.json backend/server.js backend/manifest.yml approuter/manifest.yml backend/package.json backend/package-lock.json
 git commit -m "Add role-based authorization with XSUAA scopes"
-```
-
-### Use Destination Service
-
-```bash
-git add approuter/manifest.yml
 git commit -m "Use BTP Destination service for backend routing"
+git commit -m "Add HTML5 Application Repository deployer"
+git commit -m "Serve frontend from HTML5 Application Repository"
+git commit -m "Refactor backend for future Generative AI Hub integration"
 ```
 
 ### Push Changes
@@ -1187,7 +1202,7 @@ git push
 
 ---
 
-## 28. Testing Commands
+## 29. Testing Commands
 
 ### Backend Health
 
@@ -1209,9 +1224,9 @@ Expected:
 401 Unauthorized
 ```
 
-### App Router API Route - Browser Authenticated Session Recommended
+### App Router UI Test
 
-Test through browser:
+Open:
 
 ```text
 https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
@@ -1231,9 +1246,38 @@ Priority: High
 Mode: mock-ai
 ```
 
+### Optional GenAI Fallback Test
+
+Temporarily set backend environment:
+
+```yaml
+env:
+  AI_MODE: genai
+```
+
+Deploy backend:
+
+```bash
+cd backend
+cf push
+```
+
+Expected mode if AI Core credentials are missing:
+
+```text
+mock-ai-fallback-genai-not-configured
+```
+
+Then switch back:
+
+```yaml
+env:
+  AI_MODE: mock
+```
+
 ---
 
-## 29. Troubleshooting
+## 30. Troubleshooting
 
 ### App Router UI Loads but Analyze Ticket Fails
 
@@ -1248,8 +1292,6 @@ If backend is stopped:
 ```bash
 cf start ticket-assistant-backend
 ```
-
-Then test again.
 
 ### 404 unknown_route in App Router Logs
 
@@ -1273,17 +1315,28 @@ Destination URL is wrong
 Destination name mismatch
 ```
 
-Check backend route:
+### HTML5 Repository UI Not Found
+
+Verify uploaded app:
 
 ```bash
-cf apps
+cf html5-list
+cf html5-list ticketassistant
 ```
 
-Test backend health:
+If App Router logs show it is trying to read from local path like:
 
-```bash
-curl https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com/health
+```text
+/home/vcap/app/index.html
 ```
+
+Check:
+
+```text
+html5-deployer/resources/ticketassistant/xs-app.json
+```
+
+Do not include a `localDir` catch-all route in the uploaded HTML5 app `xs-app.json`.
 
 ### Analyze Ticket Returns 401 or 403
 
@@ -1296,7 +1349,7 @@ User missing TicketAssistantUser role collection
 Backend not bound to XSUAA
 ```
 
-Check destination properties in BTP Cockpit:
+Check destination properties:
 
 ```text
 HTML5.ForwardAuthToken = true
@@ -1304,15 +1357,10 @@ forwardAuthToken = true
 Authentication = NoAuthentication
 ```
 
-Check backend binding:
+Check bindings:
 
 ```bash
 cf env ticket-assistant-backend
-```
-
-Check App Router binding:
-
-```bash
 cf env ticket-assistant-approuter
 ```
 
@@ -1333,51 +1381,27 @@ Then run:
 cf push
 ```
 
-### App Fails to Start
+---
 
-Check recent logs:
+## 31. Current Recommended Runtime State
 
-```bash
-cf logs <app-name> --recent
+Recommended running apps:
+
+```text
+ticket-assistant-approuter   started
+ticket-assistant-backend     started
 ```
 
-Restart app:
+Optional/stopped apps:
 
-```bash
-cf restart <app-name>
-```
-
-### Wrong Cloud Foundry Space
-
-Check target:
-
-```bash
-cf target
-```
-
-Set correct target:
-
-```bash
-cf target -o 8ecf8030trial -s dev
-```
-
-### node_modules Appears in Git
-
-Make sure `.gitignore` contains:
-
-```gitignore
-node_modules/
-```
-
-Then check:
-
-```bash
-git status
+```text
+ticket-assistant-frontend         stopped
+ticket-assistant-html5-deployer   stopped
 ```
 
 ---
 
-## 30. Current Status
+## 32. Current Status
 
 Completed:
 
@@ -1385,9 +1409,7 @@ Completed:
 - Backend created and tested locally
 - Backend deployed to SAP BTP Cloud Foundry
 - Standalone frontend created and deployed
-- App Router created and deployed
-- App Router UI tested
-- App Router `/api` endpoint tested
+- Standalone App Router created and deployed
 - XSUAA authentication added to App Router
 - Backend JWT validation added
 - Role-based authorization added with `TicketAssistantUser`
@@ -1396,36 +1418,37 @@ Completed:
 - App Router switched from inline destination to BTP Destination Service
 - HTML5 Application Repository `app-host` service instance created
 - HTML5 Application Repository `app-runtime` service instance created
+- Frontend uploaded to HTML5 Application Repository
+- App Router configured to serve frontend from HTML5 Application Repository
+- Backend refactored into AI-ready service structure
+- `AI_MODE=mock` active
+- `genAiAnalyzer.js` placeholder added for future SAP Generative AI Hub integration
 - Code pushed to GitHub
 
 Next:
 
-- Prepare frontend for HTML5 Application Repository upload
-- Deploy frontend content using HTML5 app deployer
-- Configure App Router to consume HTML5 repository content
-- Integrate SAP Generative AI Hub
 - Convert project to MTA deployment
+- Add real SAP Generative AI Hub integration when AI Core credentials are available
+- Optionally connect to an external ticket system through Destination Service
 
 ---
 
-## 31. Future Enhancements
+## 33. Future Enhancements
 
 Planned enhancements:
 
-1. Deploy frontend to HTML5 Application Repository.
-2. Configure App Router to serve frontend from HTML5 Application Repository.
+1. Convert project to MTA-based deployment.
+2. Add real SAP Generative AI Hub / SAP AI Core integration.
 3. Read ticket data from an external system such as ABC using Destination Service.
-4. Replace mock AI logic with SAP Generative AI Hub.
-5. Convert project to MTA-based deployment.
-6. Add screenshots and architecture diagrams.
-7. Add CI/CD deployment pipeline.
-8. Add an admin page for prompt/configuration management.
-9. Add ticket history persistence.
-10. Add analytics for ticket categories and priority distribution.
+4. Add screenshots and architecture diagrams.
+5. Add CI/CD deployment pipeline.
+6. Add an admin page for prompt/configuration management.
+7. Add ticket history persistence.
+8. Add analytics for ticket categories and priority distribution.
 
 ---
 
-## 32. Learning Outcomes
+## 34. Learning Outcomes
 
 This project helps learn:
 
@@ -1441,22 +1464,29 @@ This project helps learn:
 - JWT validation in backend
 - Role-based authorization with scopes and role collections
 - Destination Service and cockpit destinations
-- HTML5 Application Repository service plans
+- HTML5 Application Repository deployment
+- HTML5 deployer usage
+- AI-ready backend service design
 - GitHub workflow
 - API design and testing
-- Mock AI architecture
 - Future-ready design for SAP Generative AI Hub integration
 
 ---
 
-## 33. Author
+## 35. Resume Summary
+
+Built a secure full-stack SAP BTP ticket assistant using Node.js, Cloud Foundry, XSUAA, SAP Application Router, Destination Service, and HTML5 Application Repository. Implemented JWT validation, role-based authorization, BTP-managed routing, HTML5 repository frontend hosting, and an AI-ready backend architecture prepared for future SAP Generative AI Hub integration.
+
+---
+
+## 36. Author
 
 **Varun Kumar**
 
 ---
 
-## 34. Notes
+## 37. Notes
 
 This project is built step by step for learning SAP BTP through a practical, resume-worthy use case.
 
-The current AI behavior is mock logic. Real SAP Generative AI Hub integration will be added in a future version.
+The current AI behavior is mock logic. Real SAP Generative AI Hub integration will be added in a future version when SAP AI Core credentials are available.
