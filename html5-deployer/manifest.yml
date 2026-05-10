@@ -1,0 +1,14 @@
+---
+applications:
+  - name: ticket-assistant-html5-deployer
+    memory: 128M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    command: npm start
+    no-route: true
+    health-check-type: process
+    services:
+      - ticket-assistant-html5-host
+    env:
+      EXIT_PROCESS_AFTER_UPLOAD: true

@@ -1,0 +1,12 @@
+{
+  "_version": "1.12.0",
+  "sap.app": {
+    "id": "ticketassistant",
+    "type": "application",
+    "title": "SAP BTP Ticket Assistant",
+    "description": "AI-powered support ticket assistant built on SAP BTP",
+    "applicationVersion": {
+      "version": "1.0.0"
+    }
+  }
+}

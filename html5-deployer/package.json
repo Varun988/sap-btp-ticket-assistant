@@ -1,0 +1,14 @@
+{
+  "name": "ticket-assistant-html5-deployer",
+  "version": "1.0.0",
+  "description": "HTML5 Application Repository deployer for SAP BTP Ticket Assistant",
+  "scripts": {
+    "start": "node node_modules/@sap/html5-app-deployer/index.js"
+  },
+  "dependencies": {
+    "@sap/html5-app-deployer": "^7.1.1"
+  },
+  "engines": {
+    "node": "20.20.0"
+  }
+}
