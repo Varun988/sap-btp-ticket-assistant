@@ -1,7 +1,7 @@
 ---
 applications:
   - name: ticket-assistant-approuter
-    memory: 128M
+    memory: 256M
     instances: 1
     buildpacks:
       - nodejs_buildpack
@@ -11,3 +11,4 @@ applications:
     services:
       - ticket-assistant-xsuaa
       - ticket-assistant-destination
+      - ticket-assistant-html5-runtime

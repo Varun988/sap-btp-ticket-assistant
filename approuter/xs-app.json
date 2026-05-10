@@ -1,5 +1,5 @@
 {
-  "welcomeFile": "/index.html",
+  "welcomeFile": "/ticketassistant/index.html",
   "authenticationMethod": "route",
   "routes": [
     {
@@ -10,9 +10,9 @@
       "csrfProtection": false
     },
     {
-      "source": "^(.*)$",
+      "source": "^(/.*)$",
       "target": "$1",
-      "localDir": "resources",
+      "service": "html5-apps-repo-rt",
       "authenticationType": "xsuaa",
       "cacheControl": "no-cache, no-store, must-revalidate"
     }

@@ -8,13 +8,6 @@
       "destination": "ticket-assistant-backend",
       "authenticationType": "xsuaa",
       "csrfProtection": false
-    },
-    {
-      "source": "^(.*)$",
-      "target": "$1",
-      "localDir": ".",
-      "authenticationType": "xsuaa",
-      "cacheControl": "no-cache, no-store, must-revalidate"
     }
   ]
 }
