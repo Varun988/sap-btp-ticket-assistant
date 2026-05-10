@@ -1,0 +1,71 @@
+_schema-version: "3.3.0"
+ID: sap-btp-ticket-assistant
+version: 1.0.0
+description: SAP BTP Ticket Assistant full-stack application
+
+modules:
+  - name: ticket-assistant-backend
+    type: nodejs
+    path: backend
+    parameters:
+      app-name: ticket-assistant-backend
+      memory: 256M
+      instances: 1
+      buildpack: nodejs_buildpack
+      routes:
+        - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
+    properties:
+      AI_MODE: mock
+    requires:
+      - name: ticket-assistant-xsuaa
+
+  - name: ticket-assistant-approuter
+    type: nodejs
+    path: approuter
+    parameters:
+      app-name: ticket-assistant-approuter
+      memory: 256M
+      instances: 1
+      buildpack: nodejs_buildpack
+      routes:
+        - route: ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
+    requires:
+      - name: ticket-assistant-xsuaa
+      - name: ticket-assistant-destination
+      - name: ticket-assistant-html5-runtime
+
+  - name: ticket-assistant-html5-deployer
+    type: nodejs
+    path: html5-deployer
+    parameters:
+      app-name: ticket-assistant-html5-deployer
+      memory: 128M
+      instances: 1
+      buildpack: nodejs_buildpack
+      no-route: true
+      health-check-type: process
+    properties:
+      EXIT_PROCESS_AFTER_UPLOAD: true
+    requires:
+      - name: ticket-assistant-html5-host
+
+resources:
+  - name: ticket-assistant-xsuaa
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: ticket-assistant-xsuaa
+
+  - name: ticket-assistant-destination
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: ticket-assistant-destination
+
+  - name: ticket-assistant-html5-runtime
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: ticket-assistant-html5-runtime
+
+  - name: ticket-assistant-html5-host
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: ticket-assistant-html5-host
