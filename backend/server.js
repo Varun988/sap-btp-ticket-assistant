@@ -3,7 +3,8 @@ const cors = require("cors");
 const passport = require("passport");
 const xsenv = require("@sap/xsenv");
 const { JWTStrategy } = require("@sap/xssec").v3;
-
+const { analyzeTicketWithMockRules } = require("./services/mockAnalyzer");
+const { analyzeTicketWithGenAI } = require("./services/genAiAnalyzer");
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -165,18 +166,35 @@ app.post(
   "/analyze-ticket",
   requireJwt,
   requireScope("TicketAssistantUser"),
-  (req, res) => {
-    const { ticketText } = req.body;
+  async (req, res) => {
+    try {
+      const { ticketText } = req.body;
 
-    if (!ticketText || ticketText.trim().length === 0) {
-      return res.status(400).json({
-        error: "ticketText is required"
+      if (!ticketText || ticketText.trim().length === 0) {
+        return res.status(400).json({
+          error: "ticketText is required"
+        });
+      }
+
+      const aiMode = process.env.AI_MODE || "mock";
+
+      let result;
+
+      if (aiMode === "genai") {
+        result = await analyzeTicketWithGenAI(ticketText);
+      } else {
+        result = analyzeTicketWithMockRules(ticketText);
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Ticket analysis failed:", error);
+
+      res.status(500).json({
+        error: "Ticket analysis failed",
+        message: error.message
       });
     }
-
-    const result = analyzeTicket(ticketText);
-
-    res.json(result);
   }
 );
 
