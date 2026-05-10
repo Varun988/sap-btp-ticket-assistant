@@ -10,12 +10,4 @@ applications:
       - route: ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com
     services:
       - ticket-assistant-xsuaa
-    env:
-      destinations: >
-        [
-          {
-            "name": "ticket-assistant-backend",
-            "url": "https://ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com",
-            "forwardAuthToken": true
-          }
-        ]
+      - ticket-assistant-destination
