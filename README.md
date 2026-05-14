@@ -1,10 +1,12 @@
 # SAP BTP Ticket Assistant
 
-AI-powered support ticket assistant built on **SAP Business Technology Platform (SAP BTP)**.
+AI-powered support ticket assistant built on SAP Business Technology Platform (SAP BTP).
 
 This project is a hands-on SAP BTP learning project that demonstrates a secure, full-stack extension-style application using Cloud Foundry, SAP Application Router, XSUAA, Destination Service, HTML5 Application Repository, and an AI-ready backend architecture.
 
-The current backend uses **mock AI logic** and is structured so that it can later be connected to **SAP Generative AI Hub / SAP AI Core** when service credentials are available.
+The current backend uses mock AI logic and is structured so that it can later be connected to SAP Generative AI Hub / SAP AI Core when service credentials are available.
+
+The project is now designed to use an **Enterprise Wiki / Knowledge Base through SAP BTP Destination Service**. This means the wiki source is not hardcoded in the backend. If the enterprise wiki changes in the future, only the destination configuration in SAP BTP Cockpit needs to be updated.
 
 ---
 
@@ -17,6 +19,7 @@ The application accepts a support ticket description and returns:
 - Priority
 - Suggested next action
 - Processing mode
+- Optional enterprise wiki source references
 
 Current mode:
 
@@ -24,10 +27,16 @@ Current mode:
 mock-ai
 ```
 
+Current enhanced design:
+
+```text
+mock-ai + enterprise wiki retrieval through SAP BTP Destination Service
+```
+
 Future target mode:
 
 ```text
-SAP Generative AI Hub / SAP AI Core
+SAP Generative AI Hub / SAP AI Core + enterprise wiki retrieval through SAP BTP Destination Service
 ```
 
 ---
@@ -47,16 +56,169 @@ The application analyzes the ticket and returns a structured response:
   "summary": "User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.",
   "category": "Identity and Access Management",
   "priority": "High",
-  "suggestedAction": "Check user lock status, password synchronization, authentication logs, and identity management provisioning status.",
-  "mode": "mock-ai"
+  "suggestedAction": "Refer to SAP IDM Password Sync Troubleshooting: verify password synchronization status, check user lock status, review authentication logs, inspect pending provisioning tasks, and validate dispatcher/job status.",
+  "mode": "mock-ai",
+  "knowledgeBaseSources": [
+    {
+      "title": "SAP IDM Password Sync Troubleshooting",
+      "source": "https://enterprise-wiki.example.com/articles/sap-idm-password-sync",
+      "score": 0.92
+    }
+  ]
 }
 ```
 
-This is useful for IT support teams because ticket triage can be made faster, more consistent, and easier to route to the correct support team.
+This is useful for IT support teams because ticket triage can be made faster, more consistent, easier to route to the correct support team, and grounded in approved enterprise troubleshooting documentation.
 
 ---
 
-## 3. Current Secure Deployed Architecture
+## 3. Enterprise Wiki Through Destination Service
+
+### Why Destination Service is used for Wiki
+
+The enterprise wiki should not be hardcoded inside the backend code.
+
+Instead, the backend reads the wiki through a BTP destination such as:
+
+```text
+ENTERPRISE_WIKI_API
+```
+
+This gives flexibility:
+
+```text
+Today: ENTERPRISE_WIKI_API → https://old-wiki.company.com/api
+Future: ENTERPRISE_WIKI_API → https://new-wiki.company.com/api
+```
+
+No backend code change is required if the destination points to a different wiki system later.
+
+### Supported Future Wiki Systems
+
+The same design can support different enterprise knowledge sources:
+
+- Confluence
+- SharePoint
+- ServiceNow Knowledge Base
+- Internal REST API
+- Enterprise wiki platform
+- SAP operations runbook API
+- Any HTTP-based knowledge source exposed through SAP BTP Destination Service
+
+---
+
+## 4. How AI Refers to the Wiki
+
+AI does not directly open the wiki by itself.
+
+The backend controls the process.
+
+The flow is:
+
+```text
+User enters ticket description
+   ↓
+Frontend sends ticket to App Router
+   ↓
+App Router forwards request to backend
+   ↓
+Backend receives ticketText
+   ↓
+Backend calls SAP BTP Destination Service
+   ↓
+Destination Service resolves ENTERPRISE_WIKI_API
+   ↓
+Backend calls the enterprise wiki search API
+   ↓
+Wiki returns relevant articles/runbooks
+   ↓
+Backend sends ticketText + wiki context to AI analyzer
+   ↓
+Mock AI now / SAP Generative AI Hub later generates the response
+   ↓
+Response includes suggested action and source references
+```
+
+So, technically, AI refers to the wiki in this way:
+
+```text
+AI does not fetch wiki data directly.
+Backend fetches wiki data using Destination Service.
+Backend passes relevant wiki excerpts to AI as context.
+AI generates the answer based on ticket text + wiki context.
+```
+
+### Example
+
+Ticket:
+
+```text
+User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.
+```
+
+Backend searches wiki destination:
+
+```text
+Destination Name: ENTERPRISE_WIKI_API
+Search Query: User cannot log in to SAP IDM after password reset Authentication fails invalid credentials
+```
+
+Wiki API returns:
+
+```json
+[
+  {
+    "title": "SAP IDM Password Sync Troubleshooting",
+    "url": "https://enterprise-wiki.example.com/articles/sap-idm-password-sync",
+    "excerpt": "For login failures after password reset, verify password sync job status, user lock status, authentication logs, pending provisioning tasks, and dispatcher/job status.",
+    "score": 0.92
+  }
+]
+```
+
+Backend gives AI this context:
+
+```text
+Ticket:
+User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.
+
+Relevant enterprise wiki article:
+Title: SAP IDM Password Sync Troubleshooting
+Content: For login failures after password reset, verify password sync job status, user lock status, authentication logs, pending provisioning tasks, and dispatcher/job status.
+
+Task:
+Return summary, category, priority, suggested next action, and source references.
+```
+
+AI response:
+
+```json
+{
+  "summary": "User cannot access SAP IDM after password reset due to authentication failure.",
+  "category": "Identity and Access Management",
+  "priority": "High",
+  "suggestedAction": "Refer to SAP IDM Password Sync Troubleshooting: verify password synchronization job status, check whether the user is locked, review authentication logs, inspect pending provisioning tasks, and validate dispatcher/job status.",
+  "knowledgeBaseSources": [
+    {
+      "title": "SAP IDM Password Sync Troubleshooting",
+      "source": "https://enterprise-wiki.example.com/articles/sap-idm-password-sync"
+    }
+  ]
+}
+```
+
+This approach is similar to Retrieval-Augmented Generation, or RAG.
+
+In simple words:
+
+```text
+Retrieve relevant enterprise knowledge first.
+Then generate the answer using that retrieved knowledge.
+```
+
+---
+
+## 5. Current Secure Deployed Architecture
 
 Current Cloud Foundry space:
 
@@ -94,18 +256,24 @@ Backend validates JWT token
    ↓
 Backend checks TicketAssistantUser scope
    ↓
-Backend routes request to AI analyzer service
+Backend calls Destination Service
    ↓
-mockAnalyzer.js currently processes ticket
+Destination Service resolves ENTERPRISE_WIKI_API
    ↓
-JSON response
+Backend retrieves relevant wiki/runbook content
+   ↓
+Backend routes ticket + wiki context to AI analyzer service
+   ↓
+mockAnalyzer.js currently processes ticket with wiki context
+   ↓
+JSON response with suggested action and source references
    ↓
 Frontend displays result
 ```
 
 ---
 
-## 4. Current Application URLs
+## 6. Current Application URLs
 
 Update these URLs if your Cloud Foundry routes are different.
 
@@ -137,42 +305,65 @@ The App Router URL is recommended because it uses XSUAA login, role-based author
 
 ---
 
-## 5. SAP BTP Services and Components Used
+## 7. SAP BTP Services and Components Used
 
 ### Currently Used
 
-- **SAP Business Application Studio**  
-  Used as the cloud-based development environment.
+#### SAP Business Application Studio
 
-- **Cloud Foundry Runtime**  
-  Used to deploy and run the backend, standalone frontend, App Router, and HTML5 deployer.
+Used as the cloud-based development environment.
 
-- **Authorization and Trust Management / XSUAA**  
-  Used for App Router login, JWT issuance, scopes, role templates, and backend JWT validation.
+#### Cloud Foundry Runtime
 
-- **SAP Application Router**  
-  Used as the central entry point, authentication layer, HTML5 Repository runtime consumer, and API router.
+Used to deploy and run the backend, standalone frontend, App Router, and HTML5 deployer.
 
-- **Destination Service**  
-  Used to externalize backend routing configuration from App Router manifest into BTP Cockpit.
+#### Authorization and Trust Management / XSUAA
 
-- **HTML5 Application Repository**  
-  Used to host the frontend UI in a SAP-native way.
+Used for App Router login, JWT issuance, scopes, role templates, and backend JWT validation.
 
-- **GitHub**  
-  Used for source control.
+#### SAP Application Router
+
+Used as the central entry point, authentication layer, HTML5 Repository runtime consumer, and API router.
+
+#### Destination Service
+
+Used for:
+
+1. App Router to backend routing.
+2. Backend to enterprise wiki API routing.
+3. Externalizing target URLs and authentication configuration from code.
+
+#### HTML5 Application Repository
+
+Used to host the frontend UI in a SAP-native way.
+
+#### GitHub
+
+Used for source control.
 
 ### Planned / Prepared
 
-- **SAP Generative AI Hub / SAP AI Core**  
-  Backend is refactored and ready for future Generative AI Hub integration once AI Core credentials are available.
+#### SAP Generative AI Hub / SAP AI Core
 
-- **MTA Deployment**  
-  Planned to consolidate backend, App Router, XSUAA, Destination, and HTML5 Application Repository deployment into a single enterprise-style deployment unit.
+Backend is refactored and ready for future Generative AI Hub integration once AI Core credentials are available.
+
+#### Enterprise Wiki Destination
+
+The backend is designed to call an enterprise wiki destination:
+
+```text
+ENTERPRISE_WIKI_API
+```
+
+This can point to Confluence, SharePoint, ServiceNow KB, or another internal wiki API.
+
+#### MTA Deployment
+
+Planned to consolidate backend, App Router, XSUAA, Destination, and HTML5 Application Repository deployment into a single enterprise-style deployment unit.
 
 ---
 
-## 6. Repository Structure
+## 8. Repository Structure
 
 Current structure:
 
@@ -187,7 +378,8 @@ sap-btp-ticket-assistant/
 │   ├── server.js
 │   └── services/
 │       ├── mockAnalyzer.js
-│       └── genAiAnalyzer.js
+│       ├── genAiAnalyzer.js
+│       └── wikiDestinationService.js
 ├── frontend/
 │   ├── manifest.yml
 │   ├── package.json
@@ -224,13 +416,14 @@ sap-btp-ticket-assistant/
 - `backend/` contains the secured Node.js Express API deployed to Cloud Foundry.
 - `backend/services/mockAnalyzer.js` contains the current mock ticket analysis logic.
 - `backend/services/genAiAnalyzer.js` is the future SAP Generative AI Hub integration point.
+- `backend/services/wikiDestinationService.js` retrieves relevant wiki articles through SAP BTP Destination Service.
 - `frontend/` contains the older standalone frontend deployed as a Cloud Foundry app.
 - `approuter/` contains the standalone SAP App Router configuration.
 - `html5-deployer/` uploads frontend content to HTML5 Application Repository.
 
 ---
 
-## 7. Backend Details
+## 9. Backend Details
 
 The backend is a Node.js Express application.
 
@@ -244,18 +437,18 @@ backend/
 ├── server.js
 └── services/
     ├── mockAnalyzer.js
-    └── genAiAnalyzer.js
+    ├── genAiAnalyzer.js
+    └── wikiDestinationService.js
 ```
 
 ### Backend Responsibilities
 
-```text
 1. Accept ticket analysis requests.
 2. Validate XSUAA JWT token.
 3. Check TicketAssistantUser scope.
-4. Route request to AI analyzer service.
-5. Return structured JSON response.
-```
+4. Search enterprise wiki/runbook documents through Destination Service.
+5. Route request to AI analyzer service.
+6. Return structured JSON response with optional source references.
 
 ### Backend Endpoints
 
@@ -299,10 +492,8 @@ This endpoint is protected in deployed SAP BTP runtime.
 
 Security requirements:
 
-```text
-Valid XSUAA JWT token
-TicketAssistantUser scope
-```
+- Valid XSUAA JWT token
+- TicketAssistantUser scope
 
 Request body:
 
@@ -319,16 +510,23 @@ Example response:
   "summary": "User cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials.",
   "category": "Identity and Access Management",
   "priority": "High",
-  "suggestedAction": "Check user lock status, password synchronization, authentication logs, and identity management provisioning status.",
-  "mode": "mock-ai"
+  "suggestedAction": "Refer to SAP IDM Password Sync Troubleshooting: verify password synchronization status, check user lock status, review authentication logs, inspect pending provisioning tasks, and validate dispatcher/job status.",
+  "mode": "mock-ai",
+  "knowledgeBaseSources": [
+    {
+      "title": "SAP IDM Password Sync Troubleshooting",
+      "source": "https://enterprise-wiki.example.com/articles/sap-idm-password-sync",
+      "score": 0.92
+    }
+  ]
 }
 ```
 
 ---
 
-## 8. AI Analyzer Design
+## 10. AI Analyzer Design
 
-The backend now supports an AI mode switch using the environment variable:
+The backend supports an AI mode switch using the environment variable:
 
 ```text
 AI_MODE
@@ -343,34 +541,49 @@ env:
 
 ### Supported Modes
 
-```text
-AI_MODE=mock
-```
+#### AI_MODE=mock
 
-Uses current keyword-based mock analyzer.
+Uses current keyword-based mock analyzer. The mock analyzer can also use wiki articles returned by `wikiDestinationService.js`.
 
-```text
-AI_MODE=genai
-```
+#### AI_MODE=genai
 
 Intended future mode for SAP Generative AI Hub / SAP AI Core integration.
 
 ### Current AI Service Files
 
-```text
-backend/services/mockAnalyzer.js
-```
+#### backend/services/mockAnalyzer.js
 
-Contains the current mock keyword-based analyzer.
+Contains the current mock keyword-based analyzer. It can accept optional wiki context so that suggested actions can be influenced by matching enterprise troubleshooting documents.
 
-```text
-backend/services/genAiAnalyzer.js
-```
+#### backend/services/genAiAnalyzer.js
 
 Contains the future SAP Generative AI Hub integration placeholder. If AI Core credentials are not available, it safely falls back to mock logic and returns:
 
 ```text
 mock-ai-fallback-genai-not-configured
+```
+
+#### backend/services/wikiDestinationService.js
+
+Calls the enterprise wiki API through SAP BTP Destination Service.
+
+Expected default destination name:
+
+```text
+ENTERPRISE_WIKI_API
+```
+
+Expected default search path:
+
+```text
+/search
+```
+
+Both values can be changed through environment variables:
+
+```text
+WIKI_DESTINATION_NAME
+WIKI_SEARCH_PATH
 ```
 
 ### Future GenAI Flow
@@ -380,18 +593,20 @@ POST /analyze-ticket
    ↓
 server.js checks AI_MODE
    ↓
+wikiDestinationService.js retrieves relevant wiki context through Destination Service
+   ↓
 AI_MODE=genai
    ↓
 genAiAnalyzer.js
    ↓
 SAP AI Core / Generative AI Hub orchestration API
    ↓
-Structured JSON response
+Structured JSON response with source references
 ```
 
 ---
 
-## 9. Mock AI Logic
+## 11. Mock AI Logic
 
 The current backend uses simple keyword-based logic.
 
@@ -402,11 +617,186 @@ Examples:
 - If ticket text contains `performance`, `slow`, `latency`, or `timeout`, the category becomes `Performance`.
 - If ticket text contains `authorization`, `access denied`, `permission`, or `role`, the category becomes `Authorization`.
 
-This logic is temporary. The backend is now structured so it can later call SAP Generative AI Hub when AI Core credentials are available.
+This logic is temporary. The backend is structured so it can later call SAP Generative AI Hub when AI Core credentials are available.
+
+With the new wiki destination layer, the mock analyzer can also return source references from enterprise wiki articles.
 
 ---
 
-## 10. SAP Generative AI Hub Readiness
+## 12. Wiki Destination Configuration
+
+### Destination Service Instance
+
+The backend must be bound to the Destination service instance:
+
+```text
+ticket-assistant-destination
+```
+
+### Destination Name
+
+Create a cockpit destination:
+
+```text
+ENTERPRISE_WIKI_API
+```
+
+### Example Destination Details
+
+```text
+Name: ENTERPRISE_WIKI_API
+Type: HTTP
+URL: https://enterprise-wiki.example.com/api
+Proxy Type: Internet
+Authentication: NoAuthentication / BasicAuthentication / OAuth2ClientCredentials
+```
+
+For a real enterprise system, choose authentication based on your wiki platform.
+
+Possible options:
+
+```text
+NoAuthentication
+BasicAuthentication
+OAuth2ClientCredentials
+OAuth2SAMLBearerAssertion
+PrincipalPropagation
+```
+
+### Example Custom Properties
+
+```text
+HTML5.DynamicDestination = true
+```
+
+For backend usage, the most important requirement is that the backend app is bound to Destination Service and XSUAA.
+
+### Future Destination Switch
+
+If the wiki changes from one platform to another, update only the destination:
+
+```text
+BTP Cockpit → Connectivity → Destinations → ENTERPRISE_WIKI_API → URL
+```
+
+Example:
+
+```text
+Old URL: https://old-wiki.company.com/api
+New URL: https://new-wiki.company.com/api
+```
+
+Then restart the backend if needed:
+
+```bash
+cf restart ticket-assistant-backend
+```
+
+No code change is required.
+
+---
+
+## 13. wikiDestinationService.js Design
+
+The backend should use a service like this:
+
+```javascript
+const { executeHttpRequest } = require("@sap-cloud-sdk/http-client");
+
+const WIKI_DESTINATION_NAME =
+  process.env.WIKI_DESTINATION_NAME || "ENTERPRISE_WIKI_API";
+
+const WIKI_SEARCH_PATH = process.env.WIKI_SEARCH_PATH || "/search";
+
+function normalizeTicketForSearch(ticketText) {
+  return ticketText
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function searchEnterpriseWiki(ticketText) {
+  const query = normalizeTicketForSearch(ticketText);
+
+  try {
+    const response = await executeHttpRequest(
+      { destinationName: WIKI_DESTINATION_NAME },
+      {
+        method: "GET",
+        url: WIKI_SEARCH_PATH,
+        params: {
+          q: query
+        }
+      }
+    );
+
+    const articles = response.data?.results || response.data || [];
+
+    if (!Array.isArray(articles)) {
+      return [];
+    }
+
+    return articles.slice(0, 3).map((article) => ({
+      title: article.title || article.name || "Untitled Wiki Article",
+      source: article.url || article.link || WIKI_DESTINATION_NAME,
+      excerpt: article.excerpt || article.summary || article.content || "",
+      score: article.score || null
+    }));
+  } catch (error) {
+    console.error("Failed to retrieve wiki articles from destination:", {
+      destination: WIKI_DESTINATION_NAME,
+      message: error.message
+    });
+
+    return [];
+  }
+}
+
+module.exports = {
+  searchEnterpriseWiki
+};
+```
+
+Install dependency in backend:
+
+```bash
+cd backend
+npm install @sap-cloud-sdk/http-client
+```
+
+---
+
+## 14. Backend Integration Pattern
+
+In `server.js`, import:
+
+```javascript
+const { searchEnterpriseWiki } = require("./services/wikiDestinationService");
+```
+
+Inside `/analyze-ticket` route:
+
+```javascript
+const wikiArticles = await searchEnterpriseWiki(ticketText);
+```
+
+Then pass wiki context to the analyzer:
+
+```javascript
+let result;
+
+if (process.env.AI_MODE === "genai") {
+  result = await analyzeTicketWithGenAI(ticketText, wikiArticles);
+} else {
+  result = analyzeTicketWithMockRules(ticketText, wikiArticles);
+}
+```
+
+Keep the existing JWT validation and role checks in your current backend.
+
+---
+
+## 15. SAP Generative AI Hub Readiness
 
 Real SAP Generative AI Hub integration is not active yet because AI Core service credentials are not currently available in the trial Cloud Foundry space used for this project.
 
@@ -432,16 +822,18 @@ Planned future flow:
 ```text
 Backend
    ↓
+Retrieve relevant enterprise wiki context through Destination Service
+   ↓
 SAP AI Core service binding / service key
    ↓
 Generative AI Hub orchestration or foundation model API
    ↓
-LLM-generated ticket analysis
+LLM-generated ticket analysis grounded in enterprise documentation
 ```
 
 ---
 
-## 11. Standalone Frontend Details - Optional / Legacy
+## 16. Standalone Frontend Details - Optional / Legacy
 
 The standalone frontend is a simple HTML, CSS, and JavaScript UI served through a small Node.js Express server.
 
@@ -468,7 +860,7 @@ This approach is now superseded by the App Router + HTML5 Application Repository
 
 ---
 
-## 12. App Router Details
+## 17. App Router Details
 
 The App Router is the recommended current entry point for this project.
 
@@ -502,7 +894,7 @@ App Router
 
 ---
 
-## 13. App Router Configuration: xs-app.json
+## 18. App Router Configuration: xs-app.json
 
 Current `approuter/xs-app.json` concept:
 
@@ -553,7 +945,7 @@ is the App Router runtime service alias, not the Cloud Foundry service instance 
 
 ---
 
-## 14. XSUAA Security Configuration
+## 19. XSUAA Security Configuration
 
 Security descriptor:
 
@@ -563,14 +955,12 @@ approuter/xs-security.json
 
 Current security concepts:
 
-```text
-XSUAA application name: ticket-assistant
-Tenant mode: dedicated
-Scope: TicketAssistantUser
-Scope: TicketAssistantAdmin
-Role template: TicketAssistantUser
-Role template: TicketAssistantAdmin
-```
+- XSUAA application name: `ticket-assistant`
+- Tenant mode: `dedicated`
+- Scope: `TicketAssistantUser`
+- Scope: `TicketAssistantAdmin`
+- Role template: `TicketAssistantUser`
+- Role template: `TicketAssistantAdmin`
 
 Role collection created in BTP Cockpit:
 
@@ -594,13 +984,15 @@ Valid JWT + role   → Request succeeds
 
 ---
 
-## 15. Destination Service Configuration
+## 20. Destination Service Configuration
 
 Destination service instance:
 
 ```text
 ticket-assistant-destination
 ```
+
+### Backend Destination Used by App Router
 
 Cockpit destination:
 
@@ -626,11 +1018,29 @@ HTML5.ForwardAuthToken = true
 forwardAuthToken = true
 ```
 
-The App Router manifest no longer contains inline backend destinations. The App Router now resolves `ticket-assistant-backend` from BTP Destination Service.
+### Enterprise Wiki Destination Used by Backend
+
+Cockpit destination:
+
+```text
+ENTERPRISE_WIKI_API
+```
+
+Destination details example:
+
+```text
+Name: ENTERPRISE_WIKI_API
+Type: HTTP
+URL: https://enterprise-wiki.example.com/api
+Proxy Type: Internet
+Authentication: OAuth2ClientCredentials / BasicAuthentication / NoAuthentication
+```
+
+The backend uses `WIKI_DESTINATION_NAME` to determine which destination to call.
 
 ---
 
-## 16. HTML5 Application Repository Setup
+## 21. HTML5 Application Repository Setup
 
 HTML5 Application Repository service instances:
 
@@ -666,9 +1076,7 @@ ticketassistant   1.0.0   ticket-assistant-html5-host
 
 Important fix applied:
 
-```text
-Removed localDir route from html5-deployer/resources/ticketassistant/xs-app.json
-```
+Removed `localDir` route from `html5-deployer/resources/ticketassistant/xs-app.json`.
 
 This fixed the issue where the App Router attempted to load files from:
 
@@ -680,7 +1088,7 @@ instead of HTML5 Application Repository runtime.
 
 ---
 
-## 17. Local Setup
+## 22. Local Setup
 
 ### Clone Repository
 
@@ -699,11 +1107,12 @@ git config --global --list
 
 ---
 
-## 18. Run Backend Locally
+## 23. Run Backend Locally
 
 ```bash
 cd backend
 npm install
+npm install @sap-cloud-sdk/http-client
 npm start
 ```
 
@@ -713,12 +1122,9 @@ Expected output:
 Ticket Assistant Backend running on port 4000
 ```
 
-When running locally without XSUAA binding, the backend may log:
+When running locally without XSUAA or Destination service binding, the backend may not be able to retrieve wiki articles from BTP Destination Service.
 
-```text
-XSUAA binding not found. Running without JWT authentication.
-This is acceptable for local development only.
-```
+This is acceptable for local development. In that case, the backend should return an empty `knowledgeBaseSources` array or use fallback logic.
 
 Test health endpoint:
 
@@ -736,36 +1142,7 @@ curl -X POST http://localhost:4000/analyze-ticket \
 
 ---
 
-## 19. Run Standalone Frontend Locally - Optional
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Expected output:
-
-```text
-Ticket Assistant Frontend running on port 8080
-```
-
-Health check:
-
-```bash
-curl http://localhost:8080/health
-```
-
-Alternative static test used earlier:
-
-```bash
-cd frontend
-python3 -m http.server 8080
-```
-
----
-
-## 20. Cloud Foundry CLI Commands Used
+## 24. Cloud Foundry CLI Commands Used
 
 ### Check CF CLI Version
 
@@ -815,27 +1192,9 @@ cf apps
 cf services
 ```
 
-### Check Marketplace Offering Plans
-
-```bash
-cf marketplace -e html5-apps-repo
-```
-
-```bash
-cf marketplace -e html5-apps-repo --show-unavailable
-```
-
-Alias:
-
-```bash
-cf m -e html5-apps-repo --show-unavailable
-```
-
-Note: Some CF CLI versions do not support `cf marketplace -s`. Use `-e` instead.
-
 ---
 
-## 21. Deploy Backend to Cloud Foundry
+## 25. Deploy Backend to Cloud Foundry
 
 From the backend folder:
 
@@ -859,9 +1218,16 @@ applications:
       - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
     services:
       - ticket-assistant-xsuaa
+      - ticket-assistant-destination
     env:
       AI_MODE: mock
+      WIKI_DESTINATION_NAME: ENTERPRISE_WIKI_API
+      WIKI_SEARCH_PATH: /search
 ```
+
+Important:
+
+The backend must be bound to `ticket-assistant-destination` because the backend consumes `ENTERPRISE_WIKI_API` through Destination Service.
 
 Test deployed backend health endpoint:
 
@@ -885,7 +1251,7 @@ Expected:
 
 ---
 
-## 22. Deploy App Router to Cloud Foundry
+## 26. Deploy App Router to Cloud Foundry
 
 From the App Router folder:
 
@@ -927,7 +1293,50 @@ https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/ticketassis
 
 ---
 
-## 23. XSUAA Service Commands Used
+## 27. Destination Service Commands Used
+
+### Create Destination Service Instance
+
+```bash
+cf create-service destination lite ticket-assistant-destination
+```
+
+### Check Destination Service Instance
+
+```bash
+cf service ticket-assistant-destination
+```
+
+### Verify Destination Service Binding on Backend
+
+```bash
+cf env ticket-assistant-backend
+```
+
+In `VCAP_SERVICES`, verify:
+
+```text
+xsuaa
+destination
+```
+
+### Verify Destination Service Binding on App Router
+
+```bash
+cf env ticket-assistant-approuter
+```
+
+In `VCAP_SERVICES`, verify:
+
+```text
+xsuaa
+destination
+html5-apps-repo
+```
+
+---
+
+## 28. XSUAA Service Commands Used
 
 ### Create XSUAA Service Instance
 
@@ -969,45 +1378,12 @@ cf push
 
 ---
 
-## 24. Destination Service Commands Used
-
-### Create Destination Service Instance
-
-```bash
-cf create-service destination lite ticket-assistant-destination
-```
-
-### Check Destination Service Instance
-
-```bash
-cf service ticket-assistant-destination
-```
-
-### Verify Destination Service Binding on App Router
-
-```bash
-cf env ticket-assistant-approuter
-```
-
-In `VCAP_SERVICES`, verify:
-
-```text
-xsuaa
-destination
-html5-apps-repo
-```
-
----
-
-## 25. HTML5 Application Repository Commands Used
+## 29. HTML5 Application Repository Commands Used
 
 ### Check HTML5 Application Repository Service Plans
 
 ```bash
 cf marketplace -e html5-apps-repo
-```
-
-```bash
 cf marketplace -e html5-apps-repo --show-unavailable
 ```
 
@@ -1065,7 +1441,7 @@ Expected paths include:
 
 ---
 
-## 26. HTML5 Deployer Commands Used
+## 30. HTML5 Deployer Commands Used
 
 ### Deploy / Upload HTML5 Frontend Content
 
@@ -1093,7 +1469,7 @@ The deployer is not a long-running app. It is expected to stop after upload.
 
 ---
 
-## 27. Application Lifecycle Commands Used
+## 31. Application Lifecycle Commands Used
 
 ### Start Backend
 
@@ -1141,13 +1517,7 @@ cf stop ticket-assistant-html5-deployer
 
 ```bash
 cf logs ticket-assistant-approuter --recent
-```
-
-```bash
 cf logs ticket-assistant-backend --recent
-```
-
-```bash
 cf logs ticket-assistant-html5-deployer --recent
 ```
 
@@ -1155,15 +1525,12 @@ cf logs ticket-assistant-html5-deployer --recent
 
 ```bash
 cf env ticket-assistant-approuter
-```
-
-```bash
 cf env ticket-assistant-backend
 ```
 
 ---
 
-## 28. Git Workflow Commands Used
+## 32. Git Workflow Commands Used
 
 ### Check Status
 
@@ -1192,6 +1559,7 @@ git commit -m "Use BTP Destination service for backend routing"
 git commit -m "Add HTML5 Application Repository deployer"
 git commit -m "Serve frontend from HTML5 Application Repository"
 git commit -m "Refactor backend for future Generative AI Hub integration"
+git commit -m "Use Destination Service for enterprise wiki retrieval"
 ```
 
 ### Push Changes
@@ -1202,7 +1570,7 @@ git push
 
 ---
 
-## 29. Testing Commands
+## 33. Testing Commands
 
 ### Backend Health
 
@@ -1244,6 +1612,22 @@ Expected result:
 Category: Identity and Access Management
 Priority: High
 Mode: mock-ai
+Knowledge Base Source: SAP IDM Password Sync Troubleshooting
+```
+
+### Destination-Based Wiki Test
+
+After backend is deployed and bound to Destination Service, test through App Router UI.
+
+If the wiki destination returns matching results, the response should include:
+
+```json
+"knowledgeBaseSources": [
+  {
+    "title": "SAP IDM Password Sync Troubleshooting",
+    "source": "https://enterprise-wiki.example.com/articles/sap-idm-password-sync"
+  }
+]
 ```
 
 ### Optional GenAI Fallback Test
@@ -1277,7 +1661,7 @@ env:
 
 ---
 
-## 30. Troubleshooting
+## 34. Troubleshooting
 
 ### App Router UI Loads but Analyze Ticket Fails
 
@@ -1309,47 +1693,56 @@ x_cf_routererror:"unknown_route"
 
 Possible causes:
 
-```text
-Backend app is stopped
-Destination URL is wrong
-Destination name mismatch
-```
+- Backend app is stopped
+- Destination URL is wrong
+- Destination name mismatch
 
-### HTML5 Repository UI Not Found
+### Wiki Sources Not Returned
 
-Verify uploaded app:
+Possible causes:
+
+- Destination `ENTERPRISE_WIKI_API` does not exist
+- Backend is not bound to `ticket-assistant-destination`
+- Backend is not bound to XSUAA
+- Wiki API search path is different from `WIKI_SEARCH_PATH`
+- Wiki API response format is different from expected format
+- Ticket text does not match any wiki article
+- Wiki API authentication is failing
+
+Check backend service bindings:
 
 ```bash
-cf html5-list
-cf html5-list ticketassistant
+cf env ticket-assistant-backend
 ```
 
-If App Router logs show it is trying to read from local path like:
+Check backend logs:
 
-```text
-/home/vcap/app/index.html
+```bash
+cf logs ticket-assistant-backend --recent
 ```
 
-Check:
+Check backend manifest:
 
-```text
-html5-deployer/resources/ticketassistant/xs-app.json
+```yaml
+services:
+  - ticket-assistant-xsuaa
+  - ticket-assistant-destination
+
+env:
+  WIKI_DESTINATION_NAME: ENTERPRISE_WIKI_API
+  WIKI_SEARCH_PATH: /search
 ```
-
-Do not include a `localDir` catch-all route in the uploaded HTML5 app `xs-app.json`.
 
 ### Analyze Ticket Returns 401 or 403
 
 Possible causes:
 
-```text
-JWT not forwarded from App Router to backend
-Destination missing HTML5.ForwardAuthToken = true
-User missing TicketAssistantUser role collection
-Backend not bound to XSUAA
-```
+- JWT not forwarded from App Router to backend
+- Destination missing `HTML5.ForwardAuthToken = true`
+- User missing `TicketAssistantUser` role collection
+- Backend not bound to XSUAA
 
-Check destination properties:
+Check destination properties for backend routing:
 
 ```text
 HTML5.ForwardAuthToken = true
@@ -1383,7 +1776,7 @@ cf push
 
 ---
 
-## 31. Current Recommended Runtime State
+## 35. Current Recommended Runtime State
 
 Recommended running apps:
 
@@ -1401,7 +1794,7 @@ ticket-assistant-html5-deployer   stopped
 
 ---
 
-## 32. Current Status
+## 36. Current Status
 
 Completed:
 
@@ -1412,43 +1805,52 @@ Completed:
 - Standalone App Router created and deployed
 - XSUAA authentication added to App Router
 - Backend JWT validation added
-- Role-based authorization added with `TicketAssistantUser`
+- Role-based authorization added with TicketAssistantUser
 - Destination Service instance created
 - Cockpit destination created for backend
 - App Router switched from inline destination to BTP Destination Service
-- HTML5 Application Repository `app-host` service instance created
-- HTML5 Application Repository `app-runtime` service instance created
+- HTML5 Application Repository app-host service instance created
+- HTML5 Application Repository app-runtime service instance created
 - Frontend uploaded to HTML5 Application Repository
 - App Router configured to serve frontend from HTML5 Application Repository
 - Backend refactored into AI-ready service structure
-- `AI_MODE=mock` active
-- `genAiAnalyzer.js` placeholder added for future SAP Generative AI Hub integration
+- AI_MODE=mock active
+- genAiAnalyzer.js placeholder added for future SAP Generative AI Hub integration
+- Enterprise wiki destination design added
+- Backend planned to call `ENTERPRISE_WIKI_API` through Destination Service
 - Code pushed to GitHub
 
 Next:
 
+- Add `wikiDestinationService.js` to backend
+- Bind backend to Destination Service
+- Create cockpit destination `ENTERPRISE_WIKI_API`
+- Test wiki-based suggested actions
 - Convert project to MTA deployment
 - Add real SAP Generative AI Hub integration when AI Core credentials are available
 - Optionally connect to an external ticket system through Destination Service
 
 ---
 
-## 33. Future Enhancements
+## 37. Future Enhancements
 
 Planned enhancements:
 
 1. Convert project to MTA-based deployment.
 2. Add real SAP Generative AI Hub / SAP AI Core integration.
 3. Read ticket data from an external system such as ABC using Destination Service.
-4. Add screenshots and architecture diagrams.
-5. Add CI/CD deployment pipeline.
-6. Add an admin page for prompt/configuration management.
-7. Add ticket history persistence.
-8. Add analytics for ticket categories and priority distribution.
+4. Use `ENTERPRISE_WIKI_API` destination for real wiki retrieval.
+5. Add vector search or embeddings for better semantic retrieval.
+6. Add source citations in the frontend UI.
+7. Add screenshots and architecture diagrams.
+8. Add CI/CD deployment pipeline.
+9. Add an admin page for prompt/configuration management.
+10. Add ticket history persistence.
+11. Add analytics for ticket categories and priority distribution.
 
 ---
 
-## 34. Learning Outcomes
+## 38. Learning Outcomes
 
 This project helps learn:
 
@@ -1464,29 +1866,34 @@ This project helps learn:
 - JWT validation in backend
 - Role-based authorization with scopes and role collections
 - Destination Service and cockpit destinations
+- Backend consumption of Destination Service
 - HTML5 Application Repository deployment
 - HTML5 deployer usage
 - AI-ready backend service design
+- Enterprise wiki / knowledge base assisted analysis
+- RAG-style architecture basics
 - GitHub workflow
 - API design and testing
 - Future-ready design for SAP Generative AI Hub integration
 
 ---
 
-## 35. Resume Summary
+## 39. Resume Summary
 
-Built a secure full-stack SAP BTP ticket assistant using Node.js, Cloud Foundry, XSUAA, SAP Application Router, Destination Service, and HTML5 Application Repository. Implemented JWT validation, role-based authorization, BTP-managed routing, HTML5 repository frontend hosting, and an AI-ready backend architecture prepared for future SAP Generative AI Hub integration.
-
----
-
-## 36. Author
-
-**Varun Kumar**
+Built a secure full-stack SAP BTP ticket assistant using Node.js, Cloud Foundry, XSUAA, SAP Application Router, Destination Service, and HTML5 Application Repository. Implemented JWT validation, role-based authorization, BTP-managed routing, HTML5 repository frontend hosting, mock AI-based ticket analysis, enterprise wiki-assisted suggested actions through SAP BTP Destination Service, and an AI-ready backend architecture prepared for future SAP Generative AI Hub integration.
 
 ---
 
-## 37. Notes
+## 40. Author
+
+Varun Kumar
+
+---
+
+## 41. Notes
 
 This project is built step by step for learning SAP BTP through a practical, resume-worthy use case.
 
-The current AI behavior is mock logic. Real SAP Generative AI Hub integration will be added in a future version when SAP AI Core credentials are available.
+The current AI behavior is mock logic. The enhanced architecture allows the backend to retrieve enterprise wiki context through SAP BTP Destination Service and use that context to generate better suggested next actions.
+
+Real SAP Generative AI Hub integration will be added in a future version when SAP AI Core credentials are available.
