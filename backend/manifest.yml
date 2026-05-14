@@ -10,5 +10,8 @@ applications:
       - route: ticket-assistant-backend.cfapps.us10-001.hana.ondemand.com
     services:
       - ticket-assistant-xsuaa
+      - ticket-assistant-destination
     env:
       AI_MODE: mock
+      WIKI_DESTINATION_NAME: ENTERPRISE_WIKI_API
+      WIKI_SEARCH_PATH: /search

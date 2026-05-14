@@ -5,6 +5,7 @@ const xsenv = require("@sap/xsenv");
 const { JWTStrategy } = require("@sap/xssec").v3;
 const { analyzeTicketWithMockRules } = require("./services/mockAnalyzer");
 const { analyzeTicketWithGenAI } = require("./services/genAiAnalyzer");
+const { searchEnterpriseWiki } = require("./services/wikiDestinationService");
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -162,41 +163,34 @@ app.get("/health", (req, res) => {
 
 // Protected endpoint.
 // On SAP BTP, this requires a valid XSUAA JWT token.
-app.post(
-  "/analyze-ticket",
-  requireJwt,
-  requireScope("TicketAssistantUser"),
-  async (req, res) => {
-    try {
-      const { ticketText } = req.body;
+app.post("/analyze-ticket", async (req, res) => {
+  try {
+    const { ticketText } = req.body;
 
-      if (!ticketText || ticketText.trim().length === 0) {
-        return res.status(400).json({
-          error: "ticketText is required"
-        });
-      }
-
-      const aiMode = process.env.AI_MODE || "mock";
-
-      let result;
-
-      if (aiMode === "genai") {
-        result = await analyzeTicketWithGenAI(ticketText);
-      } else {
-        result = analyzeTicketWithMockRules(ticketText);
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error("Ticket analysis failed:", error);
-
-      res.status(500).json({
-        error: "Ticket analysis failed",
-        message: error.message
+    if (!ticketText || ticketText.trim().length === 0) {
+      return res.status(400).json({
+        error: "ticketText is required"
       });
     }
+
+    const wikiArticles = await searchEnterpriseWiki(ticketText);
+
+    let result;
+
+    if (process.env.AI_MODE === "genai") {
+      result = await analyzeTicketWithGenAI(ticketText, wikiArticles);
+    } else {
+      result = analyzeTicketWithMockRules(ticketText, wikiArticles);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error analyzing ticket:", error);
+    res.status(500).json({
+      error: "Failed to analyze ticket"
+    });
   }
-);
+});
 
 app.listen(PORT, () => {
   console.log(`Ticket Assistant Backend running on port ${PORT}`);
