@@ -9,7 +9,7 @@ const categoryElement = document.getElementById("category");
 const priorityElement = document.getElementById("priority");
 const suggestedActionElement = document.getElementById("suggestedAction");
 const modeElement = document.getElementById("mode");
-
+let latestResult = null;
 function showLoading(isLoading) {
   loadingElement.classList.toggle("hidden", !isLoading);
   analyzeBtn.disabled = isLoading;
@@ -67,7 +67,66 @@ function setListIfExists(id, items, emptyMessage) {
   });
 }
 
+function setDuplicateCheckIfExists(id, duplicateCheck) {
+  const element = document.getElementById(id);
+
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = "";
+
+  if (!duplicateCheck) {
+    element.textContent = "Duplicate check was not performed.";
+    element.className = "duplicate-check duplicate-neutral";
+    return;
+  }
+
+  if (!duplicateCheck.possibleDuplicate) {
+    element.textContent = `No likely duplicate found. Similarity: ${
+      duplicateCheck.similarity !== undefined ? Math.round(duplicateCheck.similarity * 100) : 0
+    }%.`;
+    element.className = "duplicate-check duplicate-ok";
+    return;
+  }
+
+  const duplicateMessage = document.createElement("div");
+  duplicateMessage.className = "duplicate-title";
+  duplicateMessage.textContent = "Possible duplicate ticket found.";
+
+  const details = document.createElement("ul");
+  details.className = "result-list";
+
+  const fields = [
+    ["Matched Ticket ID", duplicateCheck.matchedTicketId],
+    ["Matched Source", duplicateCheck.matchedSource],
+    [
+      "Similarity",
+      duplicateCheck.similarity !== undefined
+        ? `${Math.round(duplicateCheck.similarity * 100)}%`
+        : "-"
+    ],
+    ["Matched Category", duplicateCheck.matchedCategory],
+    ["Matched Priority", duplicateCheck.matchedPriority],
+    ["Matched Summary", duplicateCheck.matchedSummary],
+    ["Matched Analyzed At", duplicateCheck.matchedAnalyzedAt]
+  ];
+
+  fields.forEach(([label, value]) => {
+    if (value) {
+      const li = document.createElement("li");
+      li.textContent = `${label}: ${value}`;
+      details.appendChild(li);
+    }
+  });
+
+  element.appendChild(duplicateMessage);
+  element.appendChild(details);
+  element.className = "duplicate-check duplicate-warning";
+}
+
 function showResult(result) {
+  latestResult = result;
   summaryElement.textContent = result.summary || "-";
   categoryElement.textContent = result.category || "-";
   priorityElement.textContent = result.priority || "-";
@@ -105,6 +164,9 @@ function showResult(result) {
   );
   setTextIfExists("ticketSource", result.ticket?.source);
   setTextIfExists("ticketId", result.ticket?.ticketId || "Manual Input");
+  setTextIfExists("ticketSource", result.ticket?.source);
+  setTextIfExists("ticketId", result.ticket?.ticketId || "Manual Input");
+  setDuplicateCheckIfExists("duplicateCheck", result.duplicateCheck);
   resultCard.classList.remove("hidden");
 }
 
@@ -147,5 +209,66 @@ async function analyzeTicket() {
     showLoading(false);
   }
 }
+async function submitFeedback(feedbackType) {
+  const feedbackStatus = document.getElementById("feedbackStatus");
+  const feedbackCommentElement = document.getElementById("feedbackComment");
+
+  if (!latestResult) {
+    if (feedbackStatus) {
+      feedbackStatus.textContent = "Please analyze a ticket before submitting feedback.";
+      feedbackStatus.className = "feedback-status feedback-error";
+    }
+    return;
+  }
+
+  const ticketId = latestResult.ticket?.ticketId || null;
+  const comment = feedbackCommentElement ? feedbackCommentElement.value.trim() : "";
+
+  if (feedbackStatus) {
+    feedbackStatus.textContent = "Saving feedback...";
+    feedbackStatus.className = "feedback-status feedback-neutral";
+  }
+
+  try {
+    const response = await fetch("/api/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ticketId,
+        feedbackType,
+        comment
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Feedback API returned status ${response.status}`);
+    }
+
+    if (feedbackStatus) {
+      feedbackStatus.textContent = "Feedback saved. Thank you.";
+      feedbackStatus.className = "feedback-status feedback-success";
+    }
+
+    if (feedbackCommentElement) {
+      feedbackCommentElement.value = "";
+    }
+  } catch (error) {
+    console.error("Error submitting feedback:", error);
+
+    if (feedbackStatus) {
+      feedbackStatus.textContent = "Failed to save feedback. Please try again.";
+      feedbackStatus.className = "feedback-status feedback-error";
+    }
+  }
+}
 
 analyzeBtn.addEventListener("click", analyzeTicket);
+
+document.querySelectorAll(".feedback-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    const feedbackType = button.getAttribute("data-feedback");
+    submitFeedback(feedbackType);
+  });
+});

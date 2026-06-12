@@ -12,8 +12,9 @@
       <header>
         <h1>SAP BTP Ticket Assistant</h1>
         <p>
-          Enter a support ticket description and get a mock AI-based summary,
-          category, priority, and suggested action.
+          Enter a support ticket description and get an enhanced mock AI-based
+          summary, category, priority, severity, recommended team, duplicate check,
+          and suggested action.
         </p>
       </header>
 
@@ -37,21 +38,20 @@
       <section id="resultCard" class="result hidden">
         <h2>Analysis Result</h2>
 
-        <div class="result-row">
+        <div class="result-row full-width">
           <span class="label">Summary</span>
           <span id="summary"></span>
         </div>
 
         <div class="result-row">
           <span class="label">Ticket Source</span>
-          <span id="ticketSource" class="result"></span>
+          <span id="ticketSource"></span>
         </div>
 
         <div class="result-row">
           <span class="label">Ticket ID</span>
-          <span id="ticketId" class="result"></span>
+          <span id="ticketId"></span>
         </div>
-
 
         <div class="result-row">
           <span class="label">Category</span>
@@ -64,13 +64,89 @@
         </div>
 
         <div class="result-row">
-          <span class="label">Suggested Action</span>
-          <span id="suggestedAction"></span>
+          <span class="label">Severity</span>
+          <span id="severity"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Confidence</span>
+          <span id="confidence"></span>
+        </div>
+
+        <div class="result-row">
+          <span class="label">Recommended Team</span>
+          <span id="recommendedTeam"></span>
         </div>
 
         <div class="result-row">
           <span class="label">Mode</span>
           <span id="mode"></span>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Suggested Action</span>
+          <span id="suggestedAction"></span>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Duplicate Check</span>
+          <div id="duplicateCheck" class="duplicate-check duplicate-neutral"></div>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Missing Information</span>
+          <ul id="missingInformation" class="result-list"></ul>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Reasoning</span>
+          <ul id="reasoning" class="result-list"></ul>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Draft Response</span>
+          <pre id="draftResponse" class="draft-response"></pre>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Knowledge Base Sources</span>
+          <ul id="knowledgeBaseSources" class="result-list"></ul>
+        </div>
+
+        <div class="result-row full-width">
+          <span class="label">Feedback</span>
+
+          <div class="feedback-section">
+            <div class="feedback-buttons">
+              <button type="button" class="feedback-btn" data-feedback="useful">
+                Useful
+              </button>
+
+              <button type="button" class="feedback-btn" data-feedback="not_useful">
+                Not Useful
+              </button>
+
+              <button type="button" class="feedback-btn" data-feedback="wrong_category">
+                Wrong Category
+              </button>
+
+              <button type="button" class="feedback-btn" data-feedback="wrong_priority">
+                Wrong Priority
+              </button>
+
+              <button type="button" class="feedback-btn" data-feedback="wrong_duplicate_detection">
+                Wrong Duplicate Detection
+              </button>
+            </div>
+
+            <textarea
+              id="feedbackComment"
+              rows="3"
+              placeholder="Optional comment for improving future recommendations..."
+            ></textarea>
+
+            <div id="feedbackStatus" class="feedback-status hidden"></div>
+          </div>
         </div>
       </section>
     </section>

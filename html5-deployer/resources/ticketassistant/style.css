@@ -162,3 +162,94 @@ button:disabled {
   font-family: inherit;
   color: #1f2933;
 }
+.duplicate-check {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.duplicate-ok {
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  color: #067647;
+}
+
+.duplicate-warning {
+  background: #fffaeb;
+  border: 1px solid #fedf89;
+  color: #93370d;
+}
+
+.duplicate-neutral {
+  background: #f8fafc;
+  border: 1px solid #d0d5dd;
+  color: #344054;
+}
+
+.duplicate-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.feedback-section {
+  margin-top: 8px;
+}
+
+.feedback-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.feedback-btn {
+  border: 1px solid #b8c7d9;
+  background: #ffffff;
+  color: #1f2937;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.feedback-btn:hover {
+  background: #eef5ff;
+  border-color: #6b9ce8;
+}
+
+#feedbackComment {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.feedback-status {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.feedback-success {
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  color: #067647;
+}
+
+.feedback-error {
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+}
+
+.feedback-neutral {
+  background: #f8fafc;
+  border: 1px solid #d0d5dd;
+  color: #344054;
+}
+

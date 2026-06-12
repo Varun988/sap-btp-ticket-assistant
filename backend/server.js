@@ -20,6 +20,11 @@ const {
   getTicketHistory
 } = require("./services/ticketHistoryService");
 
+const {
+  addFeedback,
+  getFeedback
+} = require("./services/feedbackService");
+
 app.use(cors());
 app.use(express.json());
 
@@ -222,6 +227,64 @@ app.post("/analyze-ticket", async (req, res) => {
   }
 });
 
-app.get("/ticket-history", requireJwt, requireScope("TicketAssistantUser"), (req, res) => {
-  res.json({
-    count: getTicketHistory().length,
+app.get(
+  "/ticket-history",
+  requireJwt,
+  requireScope("TicketAssistantUser"),
+  (req, res) => {
+    const tickets = getTicketHistory();
+
+    res.json({
+      count: tickets.length,
+      tickets
+    });
+  }
+);
+
+app.post(
+  "/feedback",
+  requireJwt,
+  requireScope("TicketAssistantUser"),
+  (req, res) => {
+    try {
+      const { ticketId, feedbackType, comment } = req.body;
+
+      if (!feedbackType || feedbackType.trim().length === 0) {
+        return res.status(400).json({
+          error: "feedbackType is required"
+        });
+      }
+
+      const savedFeedback = addFeedback({
+        ticketId,
+        feedbackType,
+        comment
+      });
+
+      res.status(201).json({
+        message: "Feedback saved successfully",
+        feedback: savedFeedback
+      });
+    } catch (error) {
+      console.error("Error saving feedback:", error);
+
+      res.status(500).json({
+        error: "Failed to save feedback"
+      });
+    }
+  }
+);
+
+app.get(
+  "/feedback",
+  requireJwt,
+  requireScope("TicketAssistantAdmin"),
+  (req, res) => {
+    const feedback = getFeedback();
+
+    res.json({
+      count: feedback.length,
+      feedback
+    });
+  }
+);
