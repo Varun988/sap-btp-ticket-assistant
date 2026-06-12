@@ -14,6 +14,12 @@ const {
   buildTicketMetadata
 } = require("./services/ticketSourceService");
 
+const {
+  findPotentialDuplicate,
+  addAnalyzedTicket,
+  getTicketHistory
+} = require("./services/ticketHistoryService");
+
 app.use(cors());
 app.use(express.json());
 
@@ -182,6 +188,8 @@ app.post("/analyze-ticket", async (req, res) => {
     const normalizedTicketText = getTicketText(normalizedTicket);
     const ticketMetadata = buildTicketMetadata(normalizedTicket);
 
+    const duplicateCheck = findPotentialDuplicate(normalizedTicketText);
+
     const wikiArticles = await searchEnterpriseWiki(normalizedTicketText);
 
     let result;
@@ -192,9 +200,19 @@ app.post("/analyze-ticket", async (req, res) => {
       result = analyzeTicketWithMockRules(normalizedTicketText, wikiArticles);
     }
 
+    const savedTicket = addAnalyzedTicket(
+      normalizedTicket,
+      normalizedTicketText,
+      result
+    );
+
     res.json({
       ...result,
-      ticket: ticketMetadata
+      ticket: {
+        ...ticketMetadata,
+        ticketId: ticketMetadata.ticketId || savedTicket.ticketId
+      },
+      duplicateCheck
     });
   } catch (error) {
     console.error("Error analyzing ticket:", error);
@@ -204,3 +222,6 @@ app.post("/analyze-ticket", async (req, res) => {
   }
 });
 
+app.get("/ticket-history", requireJwt, requireScope("TicketAssistantUser"), (req, res) => {
+  res.json({
+    count: getTicketHistory().length,
