@@ -288,3 +288,6 @@ app.get(
     });
   }
 );
+app.listen(PORT, () => {
+  console.log(`Ticket Assistant Backend running on port ${PORT}`);
+});
