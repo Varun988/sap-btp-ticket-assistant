@@ -138,3 +138,27 @@ button:disabled {
 .hidden {
   display: none;
 }
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.result-list {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.result-list li {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.draft-response {
+  white-space: pre-wrap;
+  background: #f7f9fc;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  padding: 12px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: #1f2933;
+}

@@ -8,6 +8,11 @@ const { analyzeTicketWithGenAI } = require("./services/genAiAnalyzer");
 const { searchEnterpriseWiki } = require("./services/wikiDestinationService");
 const app = express();
 const PORT = process.env.PORT || 4000;
+const {
+  normalizeManualTicket,
+  getTicketText,
+  buildTicketMetadata
+} = require("./services/ticketSourceService");
 
 app.use(cors());
 app.use(express.json());
@@ -173,17 +178,24 @@ app.post("/analyze-ticket", async (req, res) => {
       });
     }
 
-    const wikiArticles = await searchEnterpriseWiki(ticketText);
+    const normalizedTicket = normalizeManualTicket(ticketText);
+    const normalizedTicketText = getTicketText(normalizedTicket);
+    const ticketMetadata = buildTicketMetadata(normalizedTicket);
+
+    const wikiArticles = await searchEnterpriseWiki(normalizedTicketText);
 
     let result;
 
     if (process.env.AI_MODE === "genai") {
-      result = await analyzeTicketWithGenAI(ticketText, wikiArticles);
+      result = await analyzeTicketWithGenAI(normalizedTicketText, wikiArticles);
     } else {
-      result = analyzeTicketWithMockRules(ticketText, wikiArticles);
+      result = analyzeTicketWithMockRules(normalizedTicketText, wikiArticles);
     }
 
-    res.json(result);
+    res.json({
+      ...result,
+      ticket: ticketMetadata
+    });
   } catch (error) {
     console.error("Error analyzing ticket:", error);
     res.status(500).json({
@@ -192,6 +204,3 @@ app.post("/analyze-ticket", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Ticket Assistant Backend running on port ${PORT}`);
-});

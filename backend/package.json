@@ -17,6 +17,7 @@
   "author": "Varun Kumar",
   "license": "ISC",
   "dependencies": {
+    "@sap-cloud-sdk/http-client": "^4.7.0",
     "@sap/xsenv": "^6.2.0",
     "@sap/xssec": "^4.13.0",
     "cors": "^2.8.5",

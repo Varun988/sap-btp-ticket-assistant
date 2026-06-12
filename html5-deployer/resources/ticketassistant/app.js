@@ -25,13 +25,86 @@ function hideError() {
   errorBox.classList.add("hidden");
 }
 
-function showResult(result) {
-  summaryElement.textContent = result.summary;
-  categoryElement.textContent = result.category;
-  priorityElement.textContent = result.priority;
-  suggestedActionElement.textContent = result.suggestedAction;
-  modeElement.textContent = result.mode;
+function setTextIfExists(id, value) {
+  const element = document.getElementById(id);
 
+  if (element) {
+    element.textContent = value || "-";
+  }
+}
+
+function setListIfExists(id, items, emptyMessage) {
+  const element = document.getElementById(id);
+
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = "";
+
+  if (!Array.isArray(items) || items.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = emptyMessage || "No items available.";
+    element.appendChild(li);
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement("li");
+
+    if (typeof item === "string") {
+      li.textContent = item;
+    } else if (item && typeof item === "object") {
+      const title = item.title || "Untitled Source";
+      const source = item.source ? ` - ${item.source}` : "";
+      const score = item.score ? ` (score: ${item.score})` : "";
+      li.textContent = `${title}${source}${score}`;
+    } else {
+      li.textContent = String(item);
+    }
+
+    element.appendChild(li);
+  });
+}
+
+function showResult(result) {
+  summaryElement.textContent = result.summary || "-";
+  categoryElement.textContent = result.category || "-";
+  priorityElement.textContent = result.priority || "-";
+  suggestedActionElement.textContent = result.suggestedAction || "-";
+  modeElement.textContent = result.mode || "-";
+
+  setTextIfExists("severity", result.severity);
+
+  setTextIfExists(
+    "confidence",
+    result.confidence !== undefined && result.confidence !== null
+      ? `${Math.round(result.confidence * 100)}%`
+      : "-"
+  );
+
+  setTextIfExists("recommendedTeam", result.recommendedTeam);
+  setTextIfExists("draftResponse", result.draftResponse);
+
+  setListIfExists(
+    "missingInformation",
+    result.missingInformation,
+    "No missing information detected."
+  );
+
+  setListIfExists(
+    "reasoning",
+    result.reasoning,
+    "No reasoning details available."
+  );
+
+  setListIfExists(
+    "knowledgeBaseSources",
+    result.knowledgeBaseSources,
+    "No knowledge base sources found."
+  );
+  setTextIfExists("ticketSource", result.ticket?.source);
+  setTextIfExists("ticketId", result.ticket?.ticketId || "Manual Input");
   resultCard.classList.remove("hidden");
 }
 
