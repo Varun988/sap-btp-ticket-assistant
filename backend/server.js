@@ -15,6 +15,10 @@ const {
 } = require("./services/ticketSourceService");
 
 const {
+  buildAnalyticsSummary
+} = require("./services/analyticsService");
+
+const {
   findPotentialDuplicate,
   addAnalyzedTicket,
   getTicketHistory
@@ -205,11 +209,14 @@ app.post("/analyze-ticket", async (req, res) => {
       result = analyzeTicketWithMockRules(normalizedTicketText, wikiArticles);
     }
 
-    const savedTicket = addAnalyzedTicket(
-      normalizedTicket,
-      normalizedTicketText,
-      result
-    );
+
+  const savedTicket = addAnalyzedTicket(
+    normalizedTicket,
+    normalizedTicketText,
+    result,
+    duplicateCheck
+  );
+
 
     res.json({
       ...result,
@@ -288,6 +295,21 @@ app.get(
     });
   }
 );
+
+app.get(
+  "/analytics/summary",
+  requireJwt,
+  requireScope("TicketAssistantAdmin"),
+  (req, res) => {
+    const summary = buildAnalyticsSummary(
+      getTicketHistory(),
+      getFeedback()
+    );
+
+    res.json(summary);
+  }
+);
+
 app.listen(PORT, () => {
   console.log(`Ticket Assistant Backend running on port ${PORT}`);
 });

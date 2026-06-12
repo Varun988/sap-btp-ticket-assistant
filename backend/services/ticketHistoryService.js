@@ -114,7 +114,12 @@ function findPotentialDuplicate(ticketText) {
   };
 }
 
-function addAnalyzedTicket(normalizedTicket, ticketText, analysisResult) {
+function addAnalyzedTicket(
+  normalizedTicket,
+  ticketText,
+  analysisResult,
+  duplicateCheck = null
+) {
   const analysisId = generateAnalysisId();
 
   const historyRecord = {
@@ -128,6 +133,11 @@ function addAnalyzedTicket(normalizedTicket, ticketText, analysisResult) {
     severity: analysisResult.severity || null,
     recommendedTeam: analysisResult.recommendedTeam || null,
     confidence: analysisResult.confidence || null,
+
+    duplicateDetected: duplicateCheck?.possibleDuplicate === true,
+    duplicateSimilarity: duplicateCheck?.similarity || 0,
+    matchedDuplicateTicketId: duplicateCheck?.matchedTicketId || null,
+
     analyzedAt: new Date().toISOString()
   };
 
@@ -151,6 +161,11 @@ function getTicketHistory() {
     severity: ticket.severity,
     recommendedTeam: ticket.recommendedTeam,
     confidence: ticket.confidence,
+
+    duplicateDetected: ticket.duplicateDetected,
+    duplicateSimilarity: ticket.duplicateSimilarity,
+    matchedDuplicateTicketId: ticket.matchedDuplicateTicketId,
+
     analyzedAt: ticket.analyzedAt
   }));
 }

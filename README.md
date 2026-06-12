@@ -8,6 +8,251 @@ The current backend uses mock AI logic and is structured so that it can later be
 
 The project is now designed to use an **Enterprise Wiki / Knowledge Base through SAP BTP Destination Service**. This means the wiki source is not hardcoded in the backend. If the enterprise wiki changes in the future, only the destination configuration in SAP BTP Cockpit needs to be updated.
 
+
+
+---
+
+## Reviewer Quick Start: What This Project Is About
+
+This project is a secure, full-stack **SAP BTP Product Support Ticket Assistant**. It is designed to help product support and IT support teams reduce repetitive triage effort by analyzing a support ticket description and returning a structured support recommendation.
+
+The application currently works without SAP AI Core and without ServiceNow/Jira access. Instead, it uses an enhanced mock-analysis engine, an enterprise-ready backend architecture, SAP BTP security, Destination Service-based routing, and a frontend hosted through HTML5 Application Repository. The code is intentionally prepared so that SAP AI Core, ServiceNow, Jira, or other enterprise systems can be connected later without redesigning the application.
+
+### In One Line
+
+```text
+A secure SAP BTP web application that analyzes support ticket text, classifies the issue, estimates priority/severity, recommends a support team, detects possible duplicate tickets, suggests next actions, shows reasoning, collects feedback, and is prepared for future enterprise ticketing and AI integrations.
+```
+
+### Problem This Project Solves
+
+Product support teams often spend time on repetitive activities such as:
+
+- Reading and summarizing incoming tickets.
+- Identifying the correct support category.
+- Deciding priority and severity.
+- Routing the ticket to the right team.
+- Searching internal wiki/runbooks.
+- Asking users for missing information.
+- Detecting duplicate tickets during repeated incidents.
+- Drafting first responses.
+- Capturing whether a recommendation was useful.
+
+This application provides a practical assistant for those tasks. The goal is not to replace support engineers, but to reduce repetitive manual effort and help engineers respond faster and more consistently.
+
+### Current User Journey
+
+```text
+Support user opens the SAP BTP Ticket Assistant UI
+   ↓
+User enters a support ticket description
+   ↓
+Frontend sends the ticket to /api/analyze-ticket through SAP App Router
+   ↓
+App Router authenticates the user with XSUAA and forwards the request
+   ↓
+Backend normalizes the ticket into a source-agnostic internal format
+   ↓
+Backend checks recent in-memory history for possible duplicate tickets
+   ↓
+Backend optionally retrieves enterprise wiki/runbook context through Destination Service
+   ↓
+Enhanced mock analyzer processes the ticket and wiki context
+   ↓
+Backend stores the analyzed ticket in local in-memory history
+   ↓
+Backend returns structured analysis, duplicate check, ticket metadata, and source references
+   ↓
+Frontend displays the result and allows support engineer feedback
+```
+
+### What the User Provides
+
+The user provides a plain text support ticket description. Example:
+
+```text
+Production users cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials for multiple users.
+```
+
+No strict format is required. The current UI supports manual ticket input. Future source integrations such as ServiceNow and Jira are prepared at code-architecture level but are not active yet.
+
+### What the Application Returns
+
+The application returns a structured support-assistance response such as:
+
+```json
+{
+  "summary": "Production users cannot log in to SAP IDM after password reset.",
+  "category": "Identity and Access Management",
+  "priority": "Critical",
+  "severity": "P1",
+  "confidence": 0.95,
+  "recommendedTeam": "IAM Support",
+  "suggestedAction": "Check password synchronization status, user lock status, authentication logs, pending provisioning tasks, and dispatcher/job status.",
+  "missingInformation": [
+    "What is the exact error message or error code?",
+    "Which environment is affected: production, QA, or development?"
+  ],
+  "reasoning": [
+    "Detected IAM-related keyword signals.",
+    "Ticket indicates multiple-user or production impact.",
+    "Recommended IAM Support based on login, password, authentication, and SAP IDM signals."
+  ],
+  "draftResponse": "Hi, we have reviewed your ticket and identified it as an Identity and Access Management issue...",
+  "mode": "enhanced-mock-ai",
+  "ticket": {
+    "source": "manual",
+    "ticketId": "MANUAL-20260612-abcd1234",
+    "requester": null,
+    "createdAt": "2026-06-12T00:00:00.000Z",
+    "priorityFromSource": null
+  },
+  "duplicateCheck": {
+    "possibleDuplicate": true,
+    "matchedTicketId": "MANUAL-20260612-wxyz5678",
+    "similarity": 0.67
+  },
+  "knowledgeBaseSources": []
+}
+```
+
+### Current Architecture at a Glance
+
+```text
+Browser
+   ↓
+SAP Application Router
+   ├── XSUAA authentication
+   ├── HTML5 Application Repository frontend runtime
+   └── /api/* backend routing through Destination Service
+        ↓
+Node.js Express Backend on Cloud Foundry
+   ├── XSUAA JWT validation and scope checks
+   ├── Ticket source normalization layer
+   ├── Enterprise wiki retrieval through Destination Service
+   ├── Enhanced mock analyzer
+   ├── Local in-memory ticket history
+   ├── Duplicate detection service
+   ├── Feedback collection service
+   └── Analytics-ready service structure
+```
+
+### Key Backend Services
+
+```text
+backend/services/mockAnalyzer.js
+```
+
+Enhanced mock analyzer that classifies tickets, calculates priority/severity, recommends a team, generates missing-information questions, reasoning, draft responses, and uses optional wiki context.
+
+```text
+backend/services/wikiDestinationService.js
+```
+
+Retrieves relevant enterprise wiki/runbook articles through SAP BTP Destination Service using the `ENTERPRISE_WIKI_API` destination.
+
+```text
+backend/services/ticketSourceService.js
+```
+
+Normalizes manual tickets today and prepares the codebase for future ServiceNow/Jira-style ticket payloads.
+
+```text
+backend/services/ticketHistoryService.js
+```
+
+Maintains in-memory ticket history, calculates text similarity, and detects possible duplicate tickets.
+
+```text
+backend/services/feedbackService.js
+```
+
+Stores human feedback in memory so support engineers can mark whether recommendations were useful or incorrect.
+
+```text
+backend/services/genAiAnalyzer.js
+```
+
+Future SAP Generative AI Hub / SAP AI Core integration point. Current project does not depend on SAP AI Core access.
+
+### Important Current Limitations
+
+```text
+SAP AI Core access is not currently available.
+```
+
+Therefore, the current working implementation uses enhanced mock AI logic. The SAP AI Core / Generative AI Hub integration point remains prepared for future use.
+
+```text
+ServiceNow/Jira access is not currently available.
+```
+
+Therefore, the current app does not actively pull tickets from ServiceNow or Jira. The code is prepared through source normalization and future Destination Service integration patterns.
+
+```text
+Ticket history and feedback are currently in-memory.
+```
+
+This is suitable for prototype/demo usage. For production usage, ticket history and feedback should be persisted in SAP HANA Cloud, PostgreSQL, or another enterprise-approved persistence layer.
+
+### Why This Project Is Useful
+
+- Helps support engineers triage tickets faster.
+- Makes ticket classification more consistent.
+- Suggests priority, severity, and support team.
+- Reduces repeated effort by detecting possible duplicate tickets.
+- Helps engineers ask better follow-up questions.
+- Drafts a first response that a human can review.
+- Can ground recommendations in enterprise wiki/runbooks through Destination Service.
+- Captures human feedback for continuous improvement.
+- Demonstrates enterprise SAP BTP architecture with security, routing, destinations, and HTML5 repository hosting.
+- Is prepared for future SAP AI Core and ticketing-system integrations without requiring those accesses today.
+
+### Main Demo Flow for Reviewers
+
+1. Open the App Router URL:
+
+```text
+https://ticket-assistant-approuter.cfapps.us10-001.hana.ondemand.com/ticketassistant/index.html
+```
+
+2. Enter this sample ticket:
+
+```text
+Production users cannot log in to SAP IDM after password reset. Authentication fails with invalid credentials for multiple users.
+```
+
+3. Review the returned analysis:
+
+```text
+Category: Identity and Access Management
+Priority: Critical
+Severity: P1
+Recommended Team: IAM Support
+Confidence: high
+Suggested Action: password sync, lock status, logs, provisioning, dispatcher/job status
+```
+
+4. Submit a similar second ticket to test duplicate detection:
+
+```text
+After password reset, users are unable to login to SAP IDM due to invalid credentials.
+```
+
+5. Use the feedback buttons to mark whether the recommendation was useful.
+
+### Reviewer-Focused Technical Highlights
+
+- Full-stack SAP BTP application using Cloud Foundry, Node.js, App Router, XSUAA, Destination Service, and HTML5 Application Repository.
+- Secure App Router entry point with XSUAA authentication.
+- Backend JWT validation and role/scope-based authorization.
+- BTP Destination Service used for backend routing and enterprise wiki access.
+- Enhanced support-ticket analysis without SAP AI Core dependency.
+- Future-ready abstraction for ServiceNow/Jira integrations.
+- In-memory duplicate detection and feedback loop for demo/product-support scenarios.
+- Clear path to production hardening through persistence, analytics, real GenAI, and ITSM integrations.
+
+
 ---
 
 ## 1. Project Overview
